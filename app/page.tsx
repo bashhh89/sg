@@ -19,9 +19,38 @@ interface ScorecardState {
   reasoningText: string | null; // Added for AI thinking display
 }
 
+// --- TEMPORARY FOR TESTING RESULTS PAGE ---
+const sampleMarkdownReport = `
+## Overall Tier: Enabler
+
+## Key Findings
+**Strengths:**
+- Some data infrastructure exists.
+- Leadership is curious about AI potential.
+**Weaknesses:**
+- Lack of clear, documented AI strategy.
+- Limited internal AI skills/team.
+- Processes are mostly manual.
+
+## Strategic Action Plan
+1.  **Develop & Document Strategy:** Define clear goals, use cases, and roadmap for AI adoption relevant to the Property/Real Estate sector.
+2.  **Identify Pilot Projects:** Select 1-2 low-risk, high-impact pilot projects (e.g., automating specific reports, lead scoring).
+3.  **Invest in Foundational Training:** Provide basic AI literacy training for key stakeholders.
+
+## Getting Started & Resources
+- [Example Resource: AI Strategy Template](#)
+- [Example Resource: Intro to AI for Business](#)
+
+## Illustrative Benchmarks
+* Companies at the 'Enabler' stage in Property/Real Estate often use AI for basic market analysis or automating back-office tasks.
+* 'Leaders' might leverage predictive analytics for property valuation or personalized tenant communication.
+`;
+// --- END TEMPORARY DATA ---
+
 export default function Home() {
-  // Define state for current step in the assessment flow
-  const [currentStep, setCurrentStep] = useState<string>('industrySelection');
+  // --- TEMPORARY FOR TESTING RESULTS PAGE ---
+  const [currentStep, setCurrentStep] = useState<string>('results'); // Start directly at results
+  // --- END TEMPORARY CHANGES ---
   
   // Define state for selected industry
   const [selectedIndustry, setSelectedIndustry] = useState<string>("Property/Real Estate");
@@ -35,8 +64,8 @@ export default function Home() {
     history: [],
     isLoading: false,
     error: null,
-    overall_status: 'not-started', // Indicate assessment hasn't begun
-    reportMarkdown: null,
+    reportMarkdown: sampleMarkdownReport, // Use the sample data
+    overall_status: 'results-generated', // Set status to show results
     reasoningText: null, // Initialize as null
   };
   

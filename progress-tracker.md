@@ -18,8 +18,8 @@
 - [x] Step 3.4: Implement AI "Thinking" Display (ScorecardQuestionDisplay.tsx, requires backend update for reasoning_text)
 
 ## Phase 4: Results Display & Output Features
-- [ ] Step 4.1: Implement Results Display - Structure & Styling (ScorecardResultsDisplay.tsx, react-markdown, Cards, SG branding)
-- [ ] Step 4.2: Implement Results Display - Score/Tier/Visual (ScorecardResultsDisplay.tsx, integrate into Key Findings)
+- [x] Step 4.1: Implement Results Display - Structure & Styling (ScorecardResultsDisplay.tsx, react-markdown, Cards, SG branding)
+- [x] Step 4.2: Implement Results Display - Score/Tier/Visual (ScorecardResultsDisplay.tsx, integrate into Key Findings)
 - [ ] Step 4.3: Generate Resource Content & Link in Report (AI Task for content, update backend prompt to link)
 - [ ] Step 4.4: Implement PDF Generation (Backend - /api/generate-pdf, Puppeteer or @react-pdf/renderer)
 - [ ] Step 4.5: Implement PDF Download (Frontend - ScorecardResultsDisplay.tsx button calls /api/generate-pdf)
@@ -32,3 +32,13 @@
 - [ ] Step 5.3: End-to-End Testing (User flows, input types, phases, PDF, email, browsers/devices)
 - [ ] Step 5.4: Final Code Review & Cleanup (Clarity, logs/comments, error handling, next.config.js warning)
 - [ ] Step 5.5: Deployment (Vercel env vars, deploy via Git, test deployed version) 
+
+## Refinements & Fixes Implemented
+- [x] Enhanced backend API error handling and logging.
+- [x] Fixed backend JSON parsing for Pollinations suffix text.
+- [x] Added typing animation effect for 'AI Thinking' display.
+- [x] Fixed frontend bug: Typing animation skipping first letter.
+- [x] Fixed frontend bug: TypeError on `currentAnswer.trim()`.
+- [x] Fixed frontend bug: `isLoading` state not resetting correctly.
+- [x] Implemented final user-confirmed 3-column layout for Q&A display.
+- [x] Refined backend prompts for AI reasoning style and question dynamism. 
