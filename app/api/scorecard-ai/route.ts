@@ -144,7 +144,7 @@ Conversation history: ${JSON.stringify(history)}.
 Your task is to ask the next relevant question for the current phase ("${currentPhaseName}"). 
 Make sure your questions are targeted to assess the organization's AI readiness and efficiency in this specific phase.
 
-**IMPORTANT: Carefully analyze the user's previous answers in the history. Use this context to make your questions significantly more relevant and personalized. Avoid asking questions that have been directly answered or made redundant by previous responses.**
+**IMPORTANT: Critically analyze the provided \`history\` of the user's answers. Use this context to significantly tailor the \`questionText\` to the user's specific situation and previous responses, whenever appropriate for the current assessment phase (${currentPhaseName}). Avoid generic questions or asking things clearly answered or made redundant by the history.**
 
 For questions, consider the following guidelines:
 - Strategy phase: Questions about AI strategy, alignment with business goals, executive support
@@ -166,7 +166,7 @@ Choose an appropriate answerType for each question:
 - "multiple-choice" for questions allowing multiple selections
 - "scale" for rating questions (1-5 or 1-10)
 
-Also provide a 'reasoning_text' field containing a clear and concise (1-2 sentences) explanation for why you are asking this specific question now, considering the current phase and conversation history. Ensure the reasoning_text is directly relevant to the question and avoids repetitive or confusing phrasing.
+For the \`reasoning_text\` field, provide the internal reasoning steps (1-2 concise sentences) that led to selecting this question. Phrase this as your own thought process (e.g., 'The user's previous input about X suggests low maturity in Y, therefore probing Z is necessary next.'). Do *not* address the user directly (avoid 'you', 'your'). Ensure this reasoning is clear and avoids garbled or nonsensical text, paying special attention to clarity on the very first turn.
 
 Return your response ONLY as a valid JSON object with this exact structure:
 {
@@ -175,7 +175,7 @@ Return your response ONLY as a valid JSON object with this exact structure:
   "options": ["Option 1", "Option 2", ...],  // Include only for choice-based questions
   "phase_status": "in-progress|completed",
   "overall_status": "assessment-in-progress|assessment-completed",
-  "reasoning_text": "Brief explanation of why this question is relevant"
+  "reasoning_text": "Internal reasoning steps that led to selecting this question"
 }`;
 
     // Create the user message
