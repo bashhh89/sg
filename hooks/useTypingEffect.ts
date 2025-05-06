@@ -11,33 +11,41 @@ export function useTypingEffect(text: string | undefined | null, speed: number =
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
-    // Reset when text changes
-    setDisplayedText('');
-    setIsComplete(false);
-    
+    // Handle empty or null text
     if (!text) {
+      setDisplayedText('');
       setIsComplete(true);
       return;
     }
-    
-    let i = 0;
-    // Use setTimeout for better performance compared to setInterval
-    const typeNextCharacter = () => {
+
+    // Start immediately with the first character
+    setDisplayedText(text.charAt(0));
+    setIsComplete(text.length <= 1); // Mark complete if text has only 1 char
+
+    // If there are more characters, set up timeouts for the rest
+    let i = 1; // Start index from the second character
+    let timeoutId: NodeJS.Timeout | undefined;
+
+    const typeRestOfCharacters = () => {
       if (i < text.length) {
         setDisplayedText((prev) => prev + text.charAt(i));
         i++;
-        setTimeout(typeNextCharacter, speed);
+        timeoutId = setTimeout(typeRestOfCharacters, speed);
       } else {
         setIsComplete(true);
       }
     };
-    
-    // Start typing
-    setTimeout(typeNextCharacter, speed);
-    
-    // Cleanup function to handle unmounting or text changes
+
+    if (text.length > 1) {
+       // Schedule the typing for the rest of the string
+       timeoutId = setTimeout(typeRestOfCharacters, speed);
+    }
+
+    // Cleanup function
     return () => {
-      // No explicit cleanup needed with setTimeout approach
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, [text, speed]);
 
