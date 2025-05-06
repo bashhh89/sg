@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from 'react';
 import ScorecardQuestionDisplay from '@/components/ScorecardQuestionDisplay';
+import ScorecardResultsDisplay from '@/components/ScorecardResultsDisplay';
 
 // Define the ScorecardState interface
 interface ScorecardState {
@@ -256,95 +257,89 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-white text-gray-900">
-      <main className="flex flex-col gap-6 items-center max-w-md w-full">
-        <h1 className="text-3xl font-bold text-sg-dark-teal text-center">
-          Social Garden AI Efficiency Scorecard
-        </h1>
-        
-        {/* Display errors if any - shown on all steps */}
-        {scorecardState.error && (
-          <div className="w-full mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded shadow-md">
-            <p className="font-bold">An Error Occurred:</p>
-            <p className="break-words">{scorecardState.error}</p>
-          </div>
-        )}
-        
-        {currentStep === 'industrySelection' && (
-          <>
-            <p className="text-center text-gray-700 mb-4">
-              Assess your organization's AI maturity and get personalized recommendations
-            </p>
-            
-            <div className="w-full">
-              <h2 className="text-xl font-semibold text-sg-dark-teal mb-2">Select Your Industry</h2>
-              <select
-                value={selectedIndustry}
-                onChange={(e) => setSelectedIndustry(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sg-mint-green text-gray-800"
-              >
-                {industries.map((industry) => (
-                  <option key={industry} value={industry}>
-                    {industry}
-                  </option>
-                ))}
-              </select>
+    <div className="min-h-screen flex items-center justify-center bg-[#f8faf9] text-gray-900 font-sans">
+      <div className="w-full max-w-5xl mx-4 my-8 bg-white rounded-2xl shadow-xl p-0 flex flex-col items-center">
+        <main className="flex flex-col gap-6 items-center w-full p-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#0a3d3d] text-center mt-2 mb-2">
+            Social Garden AI Efficiency Scorecard
+          </h1>
+          {/* Subtitle for all screens */}
+          <p className="text-center text-gray-600 mb-2 text-base">
+            Assess your organization's AI maturity and get personalized recommendations
+          </p>
+          {/* Display errors if any - shown on all steps */}
+          {scorecardState.error && (
+            <div className="w-full mt-2 p-4 bg-[#e6fbf1] border-l-4 border-[#A6F4C5] text-[#0a3d3d] rounded shadow-md">
+              <p className="font-bold">An Error Occurred:</p>
+              <p className="break-words">{scorecardState.error}</p>
             </div>
-            
-            <button
-              onClick={startAssessment}
-              className="mt-6 w-full py-3 px-6 bg-sg-mint-green text-sg-dark-teal font-semibold rounded-md hover:bg-opacity-90 transition-all"
-              disabled={scorecardState.isLoading}
-            >
-              {scorecardState.isLoading ? 'Loading...' : 'Start Assessment'}
-            </button>
-          </>
-        )}
-        
-        {currentStep === 'assessment' && (
-          <div className="w-full">
-            {/* Show ScorecardQuestionDisplay when we have a question */}
-            {scorecardState.currentQuestion && (
-              <ScorecardQuestionDisplay
-                question={scorecardState.currentQuestion}
-                answerType={scorecardState.answerType!}
-                options={scorecardState.options}
-                onSubmitAnswer={handleAnswerSubmit}
-                isLoading={scorecardState.isLoading}
-                currentPhaseName={scorecardState.currentPhaseName}
-                currentQuestionNumber={scorecardState.history.length + 1}
-                maxQuestions={MAX_QUESTIONS}
-                assessmentPhases={ASSESSMENT_PHASES}
-                reasoningText={scorecardState.reasoningText ?? undefined}
-              />
-            )}
-            
-            {/* Show loading placeholder if loading and no question yet */}
-            {!scorecardState.currentQuestion && scorecardState.isLoading && (
-              <div className="w-full p-6 border rounded-lg shadow-md text-gray-800">
-                <p>Loading assessment questions...</p>
+          )}
+          {currentStep === 'industrySelection' && (
+            <div className="w-full max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-6 items-center border border-[#e5e7eb]">
+              <div className="w-full">
+                <h2 className="text-lg font-bold text-[#0a3d3d] mb-2">Select Your Industry</h2>
+                <select
+                  value={selectedIndustry}
+                  onChange={(e) => setSelectedIndustry(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#A6F4C5] focus:border-[#A6F4C5] text-gray-800 font-sans shadow-sm transition-all"
+                >
+                  {industries.map((industry) => (
+                    <option key={industry} value={industry}>
+                      {industry}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
-          </div>
-        )}
-        
-        {currentStep === 'results' && (
-          <div className="w-full text-gray-800">
-            <h2 className="text-2xl font-bold text-sg-dark-teal mb-4">Your AI Efficiency Scorecard Results</h2>
-            
-            {/* For now, a simple placeholder for results */}
-            {scorecardState.reportMarkdown ? (
-              <div className="w-full p-6 border rounded-lg shadow-md whitespace-pre-wrap">
-                {scorecardState.reportMarkdown}
-              </div>
-            ) : (
-              <div className="w-full p-6 border rounded-lg shadow-md">
-                <p className="text-gray-800">Generating your results...</p>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
+              <button
+                onClick={startAssessment}
+                className={
+                  `w-full py-3 px-6 rounded-lg font-bold text-lg shadow-md transition-all duration-150 ` +
+                  (scorecardState.isLoading
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
+                    : 'bg-[#A6F4C5] text-[#0a3d3d] hover:bg-[#7be6a7] hover:scale-[1.03] active:scale-100')
+                }
+                disabled={scorecardState.isLoading}
+                style={{ letterSpacing: '0.01em' }}
+              >
+                {scorecardState.isLoading ? 'Loading...' : 'Start Assessment'}
+              </button>
+            </div>
+          )}
+          {currentStep === 'assessment' && (
+            <div className="w-full">
+              {/* Show ScorecardQuestionDisplay when we have a question */}
+              {scorecardState.currentQuestion && (
+                <ScorecardQuestionDisplay
+                  question={scorecardState.currentQuestion}
+                  answerType={scorecardState.answerType!}
+                  options={scorecardState.options}
+                  onSubmitAnswer={handleAnswerSubmit}
+                  isLoading={scorecardState.isLoading}
+                  currentPhaseName={scorecardState.currentPhaseName}
+                  currentQuestionNumber={scorecardState.history.length + 1}
+                  maxQuestions={MAX_QUESTIONS}
+                  assessmentPhases={ASSESSMENT_PHASES}
+                  reasoningText={scorecardState.reasoningText ?? undefined}
+                />
+              )}
+              {/* Show loading placeholder if loading and no question yet */}
+              {!scorecardState.currentQuestion && scorecardState.isLoading && (
+                <div className="w-full p-6 border rounded-lg shadow-md text-gray-800 bg-white">
+                  <p>Loading assessment questions...</p>
+                </div>
+              )}
+            </div>
+          )}
+          {currentStep === 'results' && scorecardState.reportMarkdown && (
+            <ScorecardResultsDisplay reportMarkdown={scorecardState.reportMarkdown} />
+          )}
+          {currentStep === 'results' && !scorecardState.reportMarkdown && scorecardState.isLoading && (
+            <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8 border border-[#e5e7eb] text-gray-800 text-center">
+              <p className="text-lg font-semibold">Generating your results...</p>
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
