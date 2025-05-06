@@ -156,7 +156,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
       </div>
       
       {/* Main content area with three columns */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 p-6">
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-8 p-6">
         {/* Column 1: Timeline/Phases sidebar */}
         <div className="md:col-span-1 border-r border-gray-200 pr-4">
           <h3 className="text-sm font-semibold text-gray-500 mb-4">Assessment Phases</h3>
@@ -191,7 +191,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
         </div>
         
         {/* Column 2: AI Thinking display */}
-        <div className="md:col-span-1">
+        <div className="md:col-span-2">
           <h3 className="text-sm font-semibold text-gray-500 mb-4">AI Processing</h3>
           {reasoningText && (
             <div className="p-4 rounded-xl bg-gradient-to-br from-sky-50 to-cyan-100 text-sky-800 italic text-sm shadow-md">
@@ -203,7 +203,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
         </div>
         
         {/* Column 3: Question and answer area */}
-        <div className="md:col-span-3">
+        <div className="md:col-span-4">
           {/* Question header with phase info and progress indicator */}
           <div className="mb-4">
             <h2 className="text-xl font-semibold text-sg-dark-teal">
