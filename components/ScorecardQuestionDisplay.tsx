@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTypingEffect } from '@/hooks/useTypingEffect';
 
 interface ScorecardQuestionDisplayProps {
   question: string;
@@ -27,6 +28,9 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
 }) => {
   // State to hold the user's current answer before submission
   const [currentAnswer, setCurrentAnswer] = useState<any>(answerType === 'multiple-choice' ? [] : '');
+  
+  // Use the typing effect for reasoning text
+  const { displayedText, isComplete } = useTypingEffect(reasoningText, 30);
   
   // Reset the answer when the question or answer type changes
   useEffect(() => {
@@ -192,10 +196,12 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
           
           {/* Question text */}
           <div className="bg-gray-100 p-4 rounded-md mb-6">
-            {/* AI Thinking display */}
+            {/* AI Thinking display with typing effect */}
             {reasoningText && (
               <div className="mb-4 p-3 bg-sky-50 border border-sky-200 rounded-md text-sm text-sky-700 italic">
-                <span className="font-semibold text-sky-800">AI thinking... </span> {reasoningText}
+                <span className="font-semibold text-sky-800">AI thinking... </span> 
+                {displayedText}
+                {!isComplete && <span className="ml-1 animate-pulse">▋</span>}
               </div>
             )}
             <p className="font-medium">{question}</p>
