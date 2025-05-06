@@ -144,6 +144,8 @@ Conversation history: ${JSON.stringify(history)}.
 Your task is to ask the next relevant question for the current phase ("${currentPhaseName}"). 
 Make sure your questions are targeted to assess the organization's AI readiness and efficiency in this specific phase.
 
+**IMPORTANT: Carefully analyze the user's previous answers in the history. Use this context to make your questions significantly more relevant and personalized. Avoid asking questions that have been directly answered or made redundant by previous responses.**
+
 For questions, consider the following guidelines:
 - Strategy phase: Questions about AI strategy, alignment with business goals, executive support
 - Data phase: Questions about data quality, accessibility, governance
@@ -164,7 +166,7 @@ Choose an appropriate answerType for each question:
 - "multiple-choice" for questions allowing multiple selections
 - "scale" for rating questions (1-5 or 1-10)
 
-Also provide a 'reasoning_text' field containing a brief (1-2 sentences) explanation for why you are asking this specific question now, considering the current phase and conversation history.
+Also provide a 'reasoning_text' field containing a clear and concise (1-2 sentences) explanation for why you are asking this specific question now, considering the current phase and conversation history. Ensure the reasoning_text is directly relevant to the question and avoids repetitive or confusing phrasing.
 
 Return your response ONLY as a valid JSON object with this exact structure:
 {
@@ -188,7 +190,7 @@ Return your response ONLY as a valid JSON object with this exact structure:
       body: JSON.stringify({
         model: "openai-large",
         response_format: { type: "json_object" },
-        seed: 123, // For some predictability during testing
+        // seed removed to allow for more dynamic responses
         messages: [
           {
             role: "system",
