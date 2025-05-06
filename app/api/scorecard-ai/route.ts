@@ -71,6 +71,25 @@ Review the following resources to help you get started:
 * Example: Companies in the ${industry} sector at the 'Leader' tier typically leverage AI for...
 * Example: Organizations at the 'Enabler' tier in your industry generally have...
 
+## Your Personalized AI Learning Path
+
+Based on your scorecard results, here are some recommended resources to help you advance your AI skills:
+
+For this section, select 2-4 of the most relevant resources from the following library (each resource has a title, url, level, topics, and optionally industry):
+
+- { title: "Intro to AI for Marketing Content", url: "https://example.com/ai-content-intro", level: "beginner", topics: ["content creation"] }
+- { title: "Advanced AI Lead Scoring Techniques", url: "https://example.com/ai-lead-scoring-advanced", level: "intermediate", topics: ["lead scoring", "sales"] }
+- { title: "AI in Real Estate: Getting Started", url: "https://example.com/ai-real-estate-basics", level: "beginner", topics: ["real estate"], industry: "Real Estate" }
+- { title: "AI Data Audit Checklist", url: "https://example.com/ai-data-audit", level: "beginner", topics: ["data audit", "data quality"] }
+- { title: "Building an AI-Ready Team", url: "https://example.com/ai-team-building", level: "intermediate", topics: ["team", "skills"] }
+
+For each selected resource, include:
+### [Resource Title]
+_Why this is relevant for you:_ [A brief explanation tailored to the user's scorecard results, e.g., 'You indicated an interest in improving content generation with AI.']
+[Learn More: Resource Title](Resource URL)
+
+Use the user's answers, their AI Readiness Tier, and any specific weak areas or interests identified to select and explain the resources. Do not invent new resources; only select from the provided library. Make this section genuinely helpful and personalized.
+
 Make your assessment thorough, professional, and actionable. The report should provide genuine value and strategic direction.`;
 
     // Create the user message with the complete history
