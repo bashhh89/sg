@@ -226,12 +226,27 @@ Return your response ONLY as a valid JSON object with this exact structure:
     console.log("Raw content from AI:", typeof rawContent, rawContent);
 
     if (typeof rawContent === 'string') {
-      try {
-        aiStructuredData = JSON.parse(rawContent);
-        console.log("Successfully parsed AI content string as JSON:", aiStructuredData);
-      } catch (parseError) {
-        console.error("Error: Failed to parse AI content string as JSON. Content was:", rawContent, "Error:", parseError);
-        return NextResponse.json({ error: "Malformed JSON content from AI service.", details: rawContent }, { status: 500 });
+      // Log the original content for debugging
+      console.log("Raw content string from AI:", rawContent);
+      
+      // Find the last closing brace to handle potential trailing text
+      const lastBraceIndex = rawContent.lastIndexOf('}');
+      
+      if (lastBraceIndex !== -1) {
+        // Extract the substring from the beginning up to and including the last closing brace
+        const jsonString = rawContent.substring(0, lastBraceIndex + 1);
+        console.log("Extracted potential JSON string:", jsonString);
+        
+        try {
+          aiStructuredData = JSON.parse(jsonString); // Parse the extracted string instead of full rawContent
+          console.log("Successfully parsed extracted JSON string:", aiStructuredData);
+        } catch (parseError) {
+          console.error("Error: Failed to parse extracted JSON string. String was:", jsonString, "Error:", parseError);
+          return NextResponse.json({ error: "Malformed extracted JSON content from AI service.", details: jsonString }, { status: 500 });
+        }
+      } else { // No closing brace found
+        console.error("Error: No closing brace found in AI content string. Content was:", rawContent);
+        return NextResponse.json({ error: "Invalid content format from AI service (missing closing brace).", details: rawContent }, { status: 500 });
       }
     } else if (typeof rawContent === 'object' && rawContent !== null) {
       aiStructuredData = rawContent; // It was already an object
