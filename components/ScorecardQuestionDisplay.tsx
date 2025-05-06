@@ -146,7 +146,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
   const isSubmitDisabled = isLoading || !isAnswerValid();
   
   return (
-    <div className="w-full border rounded-lg shadow-md overflow-hidden">
+    <div className="w-full max-w-7xl mx-auto border rounded-lg shadow-md overflow-hidden">
       {/* Progress bar at the top */}
       <div className="w-full bg-gray-200 h-2">
         <div
@@ -155,10 +155,10 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
         ></div>
       </div>
       
-      {/* Main content area with timeline and question */}
-      <div className="flex p-6">
-        {/* Timeline/Phases sidebar */}
-        <div className="w-1/4 pr-6 border-r border-gray-200">
+      {/* Main content area with three columns */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 p-6">
+        {/* Column 1: Timeline/Phases sidebar */}
+        <div className="md:col-span-1 border-r border-gray-200 pr-4">
           <h3 className="text-sm font-semibold text-gray-500 mb-4">Assessment Phases</h3>
           <ul className="space-y-4">
             {assessmentPhases.map((phase, index) => {
@@ -190,8 +190,20 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
           </ul>
         </div>
         
-        {/* Question and answer area */}
-        <div className="w-3/4 pl-6">
+        {/* Column 2: AI Thinking display */}
+        <div className="md:col-span-1">
+          <h3 className="text-sm font-semibold text-gray-500 mb-4">AI Processing</h3>
+          {reasoningText && (
+            <div className="p-4 rounded-xl bg-gradient-to-br from-sky-50 to-cyan-100 text-sky-800 italic text-sm shadow-md">
+              <span className="font-semibold text-sky-800">AI thinking... </span> 
+              {displayedText}
+              {!isComplete && <span className="ml-1 animate-pulse">▋</span>}
+            </div>
+          )}
+        </div>
+        
+        {/* Column 3: Question and answer area */}
+        <div className="md:col-span-3">
           {/* Question header with phase info and progress indicator */}
           <div className="mb-4">
             <h2 className="text-xl font-semibold text-sg-dark-teal">
@@ -204,14 +216,6 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
           
           {/* Question text */}
           <div className="bg-gray-100 p-4 rounded-md mb-6">
-            {/* AI Thinking display with typing effect */}
-            {reasoningText && (
-              <div className="mb-4 p-3 bg-sky-50 border border-sky-200 rounded-md text-sm text-sky-700 italic">
-                <span className="font-semibold text-sky-800">AI thinking... </span> 
-                {displayedText}
-                {!isComplete && <span className="ml-1 animate-pulse">▋</span>}
-              </div>
-            )}
             <p className="font-medium">{question}</p>
           </div>
           
