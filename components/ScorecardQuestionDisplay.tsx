@@ -131,11 +131,19 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
   };
   
   // Determine if the submit button should be disabled
-  const isSubmitDisabled = isLoading || 
-    (answerType === 'text' && currentAnswer.trim() === '') || 
-    (answerType === 'single-choice' && currentAnswer === '') || 
-    (answerType === 'multiple-choice' && (currentAnswer as string[]).length === 0) ||
-    (answerType === 'scale' && currentAnswer === '');
+  const isAnswerValid = () => {
+    if (answerType === 'multiple-choice') {
+      // Check if it's an array and has items
+      return Array.isArray(currentAnswer) && currentAnswer.length > 0;
+    } else if (typeof currentAnswer === 'string') {
+      // Check if it's a non-empty string after trimming
+      return currentAnswer.trim() !== '';
+    }
+    // Default to invalid if type is unexpected
+    return false;
+  };
+  
+  const isSubmitDisabled = isLoading || !isAnswerValid();
   
   return (
     <div className="w-full border rounded-lg shadow-md overflow-hidden">

@@ -122,6 +122,7 @@ export default function Home() {
     
     // Update history locally first and set loading state
     const newHistory = [...scorecardState.history, { question: currentQ, answer: answer }];
+    console.log('Setting isLoading: true before API call');
     setScorecardState(prev => ({ ...prev, isLoading: true, error: null, history: newHistory }));
     
     try {
@@ -146,6 +147,7 @@ export default function Home() {
         console.error(detailedErrorMessage);
         
         // Update state with detailed error and exit the function
+        console.log('Setting isLoading: false due to API error');
         setScorecardState(prev => ({ ...prev, isLoading: false, error: detailedErrorMessage }));
         return;
       }
@@ -156,13 +158,22 @@ export default function Home() {
       
       // Check if assessment is completed
       if (data.overall_status === 'assessment-completed') {
-        // Generate the report
-        generateReport(newHistory);
-      } else {
-        // Update state with the next question
+        console.log('>>> Assessment completed, setting isLoading: false before report generation');
+        // Reset loading state before generating the report
         setScorecardState(prev => ({
           ...prev,
           isLoading: false,
+          overall_status: data.overall_status
+        }));
+        console.log('<<< State update for COMPLETED assessment supposedly complete, now generating report');
+        // Generate the report
+        generateReport(newHistory);
+      } else {
+        console.log('>>> Updating state with NEXT question data:', data);
+        // Update state with the next question
+        setScorecardState(prev => ({
+          ...prev,
+          isLoading: false, // Explicitly ensure loading is set to false
           currentQuestion: data.questionText,
           answerType: data.answerType,
           options: data.options,
@@ -170,12 +181,14 @@ export default function Home() {
           overall_status: data.overall_status,
           reasoningText: data.reasoningText // Store reasoning text
         }));
+        console.log('<<< State update for NEXT question supposedly complete.');
       }
     } catch (error: any) {
       // Log the full error for debugging
       console.error('Detailed error in handleAnswerSubmit:', error);
       
       // Update state with user-friendly error message
+      console.log('Setting isLoading: false due to caught error');
       setScorecardState(prev => ({
         ...prev,
         isLoading: false,
