@@ -4,12 +4,15 @@ import Link from 'next/link';
 import React from 'react';
 import Image from 'next/image';
 import InteractivePlaceholder from '../../components/InteractivePlaceholder';
+import SidebarNav from '../../components/learning-hub/SidebarNav';
+import ToolCard from '../../components/learning-hub/ToolCard';
+import { masterToolList } from './recommended-tools/toolData';
 
 const sidebarLinks = [
   { title: 'Checklists', href: '#' },
   { title: 'Prompt Library', href: '#' },
   { title: 'Templates', href: '#' },
-  { title: 'Recommended Tools', href: '#' },
+  { title: 'Recommended Tools', href: '/learning-hub/recommended-tools' },
   { title: 'Mini Courses', href: '#' },
 ];
 
@@ -267,13 +270,57 @@ const user = {
   progress: 0.44, // 44% complete
 };
 
-// Tip of the Day (could rotate or randomize)
-const tipOfTheDay = {
-  icon: (
-    <svg className="w-6 h-6 text-[#68F6C8]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
-  ),
-  text: 'Start small: Pick one process to automate with AI this week.'
+// --- V1 Learning Progress Tracking ---
+// 1. Define trackable items for "Dabbler" tier (9 checklists, 10 prompts)
+const dabblerChecklistIds = [
+  'Generating Leads with an AI Agent',
+  'Prompting AI for Hyper-Personalized Social Media Content',
+  'Utilizing Your Data with AI for True Personalization',
+  'Identifying Processes for AI Implementation',
+  'Assessing Your Tech & Data for AI Readiness',
+  'Selecting the Right AI Tool',
+  'Training Your Team for AI Success',
+  'Running an Effective AI Pilot Program',
+  'Measuring the Impact & ROI of Your AI Initiatives',
+];
+
+// Dabbler prompt IDs (7 Content Ideation, 3 Market Research)
+const dabblerPromptIds = [
+  'p1_enhanced',
+  'dabbler_content_blog_titles',
+  'dabbler_content_social_ideas',
+  'dabbler_content_rewrite',
+  'dabbler_content_audience_questions',
+  'dabbler_content_hashtags',
+  'dabbler_content_email_intro',
+  'dabbler_market_research_competitors',
+  'dabbler_market_research_pain_points',
+  'dabbler_market_research_competitor_features',
+];
+
+const trackableItems = {
+  Dabbler: [
+    ...dabblerChecklistIds.map(id => ({ id, type: 'checklist' })),
+    ...dabblerPromptIds.map(id => ({ id, type: 'prompt' })),
+  ],
+  // Enabler and Leader can be filled in for future versions
 };
+
+// --- Tip of the Day cycling ---
+const tips = [
+  'Start small: Pick one process to automate with AI this week.',
+  'Check your progress regularly to stay motivated!',
+  'Try copying a prompt and using it in your workflow today.',
+];
+function getTipOfTheDay() {
+  let idx = 0;
+  try {
+    const stored = localStorage.getItem('SG_tip_counter');
+    idx = stored ? (parseInt(stored, 10) + 1) % tips.length : 0;
+    localStorage.setItem('SG_tip_counter', idx.toString());
+  } catch {}
+  return tips[idx];
+}
 
 // Navigation icons
 const navIcons: Record<string, React.ReactNode> = {
@@ -1085,12 +1132,606 @@ const samplePrompts: PromptWithPlaceholders[] = [
       }
     }
   },
+  // --- ENABLER PROMPTS FOR CONTENT IDEATION & CREATION ---
+  {
+    id: 'enabler_content_calendar',
+    title: '4-Week Content Calendar Outline (Intermediate)',
+    tier: 'Enabler',
+    category: 'Content Ideation & Creation',
+    fullText:
+      "Act as a Senior Content Strategist.\nMy business operates in the {{INDUSTRY_NAME}} industry. Our main marketing goal for this month is: {{MARKETING_GOAL_MONTH}}. Our target audience is: {{TARGET_AUDIENCE_CALENDAR}}. The key themes, products, or campaigns to focus on this month are: {{MONTHLY_THEMES_PRODUCTS}}.\n\nPlease outline a 4-week content calendar. For each week, suggest a main content theme, 2-3 content ideas (with format suggestions), and a brief note on how each supports the marketing goal.",
+    placeholders: {
+      INDUSTRY_NAME: {
+        guidance: "What industry does your business operate in?",
+        examples: ["'real estate'", "'health & wellness'", "'B2B SaaS'"],
+      },
+      MARKETING_GOAL_MONTH: {
+        guidance: "What is your primary marketing goal for this month?",
+        examples: ["'increase webinar sign-ups'", "'launch new product'", "'boost brand awareness'"],
+      },
+      TARGET_AUDIENCE_CALENDAR: {
+        guidance: "Who is your main target audience for this calendar?",
+        examples: ["'first-time home buyers'", "'busy professionals seeking stress relief'", "'IT managers in finance'"],
+      },
+      MONTHLY_THEMES_PRODUCTS: {
+        guidance: "List any key themes, products, or campaigns to focus on this month.",
+        examples: ["'Spring Savings campaign, new eBook launch'", "'Mental Health Awareness Month'", "'Feature update: SecureSync'"],
+      },
+    },
+  },
+  {
+    id: 'enabler_content_persona',
+    title: 'Develop Detailed Customer Persona (Intermediate)',
+    tier: 'Enabler',
+    category: 'Content Ideation & Creation',
+    fullText:
+      "Act as an experienced Market Researcher.\nI need to develop a detailed customer persona for the ideal buyer of our {{PRODUCT_SERVICE_DESCRIPTION}}. The target audience is: {{TARGET_AUDIENCE_PERSONA}}. The main problem this persona wants to solve is: {{PROBLEM_SOLVED}}.\n\nPlease provide a detailed persona including: name, demographics, job/role, key goals, pain points, preferred content types, and where they seek information online.",
+    placeholders: {
+      PRODUCT_SERVICE_DESCRIPTION: {
+        guidance: "Briefly describe your product or service.",
+        examples: ["'AI-powered CRM platform'", "'organic skincare line'", "'virtual event planning service'"],
+      },
+      TARGET_AUDIENCE_PERSONA: {
+        guidance: "Who is the main target audience for this persona?",
+        examples: ["'small business owners'", "'millennial women interested in wellness'", "'HR managers at tech companies'"],
+      },
+      PROBLEM_SOLVED: {
+        guidance: "What is the main problem this persona is trying to solve?",
+        examples: ["'streamlining customer communications'", "'finding natural skincare for sensitive skin'", "'hosting engaging virtual events'"],
+      },
+    },
+  },
+  {
+    id: 'enabler_content_ab_ad_copy',
+    title: 'A/B Test Ad Copy Variations (Intermediate)',
+    tier: 'Enabler',
+    category: 'Content Ideation & Creation',
+    fullText:
+      "Act as a Performance Marketing Specialist.\nWe are creating an ad for our {{PRODUCT_SERVICE_AD}}. The target audience is: {{TARGET_AUDIENCE_AD}}. The ad platform is: {{AD_PLATFORM}}. The key benefit to highlight is: {{KEY_BENEFIT_AD}}. The call to action is: {{CALL_TO_ACTION_AD}}.\n\nPlease generate two distinct ad copy variations for A/B testing. Each should be tailored to the platform and audience, and clearly communicate the benefit and call to action.",
+    placeholders: {
+      PRODUCT_SERVICE_AD: {
+        guidance: "What is the product or service being advertised?",
+        examples: ["'EcoBrew Travel Mug'", "'SecureCloud Pro'", "'Spring Fitness Challenge'"],
+      },
+      TARGET_AUDIENCE_AD: {
+        guidance: "Who is the main audience for this ad?",
+        examples: ["'busy commuters'", "'small business owners needing secure backups'", "'fitness enthusiasts'"],
+      },
+      AD_PLATFORM: {
+        guidance: "Which ad platform will this run on?",
+        examples: ["'Facebook'", "'Instagram Stories'", "'LinkedIn'", "'Google Search'"],
+      },
+      KEY_BENEFIT_AD: {
+        guidance: "What is the #1 benefit to emphasize in the ad?",
+        examples: ["'keeps drinks hot for 12 hours'", "'automated daily encrypted backups'", "'personalized coaching and progress tracking'"],
+      },
+      CALL_TO_ACTION_AD: {
+        guidance: "What is the main call to action for this ad?",
+        examples: ["'Shop now'", "'Start your free trial'", "'Join the challenge'"],
+      },
+    },
+  },
+  // --- FINAL ENABLER PROMPTS FOR CONTENT IDEATION & CREATION ---
+  {
+    id: 'enabler_content_keyword_blog_outline',
+    title: 'SEO Blog Post Outline (Intermediate)',
+    tier: 'Enabler',
+    category: 'Content Ideation & Creation',
+    fullText:
+      "Act as an SEO Content Specialist.\nI need to create a blog post outline optimized for the primary keyword: \"{{TARGET_KEYWORD}}\". The industry is: {{INDUSTRY_FOR_SEO}}. The target audience is: {{TARGET_AUDIENCE_SEO_BLOG}}. (Optional) A secondary keyword to include is: {{SECONDARY_KEYWORD_OPTIONAL}}. The call to action for this blog post is: {{BLOG_CTA}}.\n\nPlease generate a detailed outline with suggested H2/H3 headings, a brief description for each section, and recommendations for integrating the keywords and CTA.",
+    placeholders: {
+      TARGET_KEYWORD: {
+        guidance: "What is the primary keyword you want to rank for?",
+        examples: ["'AI marketing automation'", "'first home buyer tips'", "'employee wellness programs'"],
+      },
+      INDUSTRY_FOR_SEO: {
+        guidance: "What industry is this blog post for?",
+        examples: ["'real estate'", "'health & wellness'", "'B2B SaaS'"],
+      },
+      TARGET_AUDIENCE_SEO_BLOG: {
+        guidance: "Who is the main target audience for this blog post?",
+        examples: ["'first-time home buyers'", "'HR managers'", "'busy professionals'"],
+      },
+      SECONDARY_KEYWORD_OPTIONAL: {
+        guidance: "(Optional) Is there a secondary keyword to include?",
+        examples: ["'mortgage pre-approval'", "'mental health at work'", "'SaaS onboarding best practices'"],
+      },
+      BLOG_CTA: {
+        guidance: "What is the call to action for this blog post?",
+        examples: ["'Download our free checklist'", "'Book a consultation'", "'Sign up for our newsletter'"],
+      },
+    },
+  },
+  {
+    id: 'enabler_content_email_nurture',
+    title: '3-Email Nurture Sequence (Intermediate)',
+    tier: 'Enabler',
+    category: 'Content Ideation & Creation',
+    fullText:
+      "Act as an Email Marketing Automation Specialist.\nWe need a 3-email nurture sequence for leads who have just downloaded our whitepaper titled: \"{{WHITEPAPER_TITLE}}\". The whitepaper topic is: {{WHITEPAPER_TOPIC}}. The goal of this sequence is: {{SEQUENCE_GOAL}}. The product/service we want to introduce is: {{PRODUCT_SERVICE_NURTURE}}. The target audience is: {{TARGET_AUDIENCE_NURTURE}}. The brand voice/tone should be: {{BRAND_VOICE_NURTURE}}.\n\nPlease write a brief outline for each email (subject, main message, CTA), ensuring the sequence builds trust and moves the lead closer to the goal.",
+    placeholders: {
+      WHITEPAPER_TITLE: {
+        guidance: "What is the title of the whitepaper the lead downloaded?",
+        examples: ["'The Ultimate Guide to AI in Marketing'", "'2024 Home Buyer Checklist'", "'Employee Wellness Trends'"],
+      },
+      WHITEPAPER_TOPIC: {
+        guidance: "What is the main topic of the whitepaper?",
+        examples: ["'AI marketing strategies'", "'first home buying process'", "'corporate wellness programs'"],
+      },
+      SEQUENCE_GOAL: {
+        guidance: "What is the main goal of this nurture sequence?",
+        examples: ["'book a sales call'", "'request a product demo'", "'sign up for a webinar'"],
+      },
+      PRODUCT_SERVICE_NURTURE: {
+        guidance: "What product or service do you want to introduce in the sequence?",
+        examples: ["'AI-powered CRM'", "'First Home Buyer Coaching'", "'Wellness Platform Subscription'"],
+      },
+      TARGET_AUDIENCE_NURTURE: {
+        guidance: "Who is the main target audience for this sequence?",
+        examples: ["'marketing managers at mid-sized companies'", "'first-time home buyers'", "'HR leaders in tech'"],
+      },
+      BRAND_VOICE_NURTURE: {
+        guidance: "What brand voice or tone should the emails use?",
+        examples: ["'friendly and expert'", "'reassuring and practical'", "'innovative and inspiring'"],
+      },
+    },
+  },
+  {
+    id: 'enabler_content_rewrite_vp',
+    title: 'Refine Value Proposition (Intermediate)',
+    tier: 'Enabler',
+    category: 'Content Ideation & Creation',
+    fullText:
+      "Act as a Brand Strategist and Copywriter.\nWe need to refine our current value proposition.\nOur product/service is: {{PRODUCT_SERVICE_FOR_VP}}. The target audience is: {{TARGET_AUDIENCE_VP}}. The main pain points we solve are: {{PAIN_POINTS_SOLVED}}. Our main competitor types are: {{COMPETITOR_TYPES}}. Our key differentiators are: {{DIFFERENTIATORS}}. Our current value proposition is: {{OLD_VALUE_PROPOSITION}}.\n\nPlease rewrite the value proposition to be more compelling, clear, and differentiated. Provide a short rationale for your changes.",
+    placeholders: {
+      PRODUCT_SERVICE_FOR_VP: {
+        guidance: "Briefly describe your product or service.",
+        examples: ["'AI-powered CRM platform'", "'organic skincare line'", "'virtual event planning service'"],
+      },
+      TARGET_AUDIENCE_VP: {
+        guidance: "Who is the main target audience for this value proposition?",
+        examples: ["'small business owners'", "'millennial women interested in wellness'", "'HR managers at tech companies'"],
+      },
+      PAIN_POINTS_SOLVED: {
+        guidance: "What are the main pain points your product/service solves?",
+        examples: ["'streamlining customer communications'", "'finding natural skincare for sensitive skin'", "'hosting engaging virtual events'"],
+      },
+      COMPETITOR_TYPES: {
+        guidance: "What types of competitors do you face?",
+        examples: ["'legacy CRM providers'", "'mass-market skincare brands'", "'DIY event platforms'"],
+      },
+      DIFFERENTIATORS: {
+        guidance: "What are your key differentiators?",
+        examples: ["'AI-driven personalization'", "'100% organic ingredients'", "'full-service event management'"],
+      },
+      OLD_VALUE_PROPOSITION: {
+        guidance: "What is your current value proposition? Paste it here.",
+        examples: ["'Our CRM helps you manage leads efficiently.'", "'Natural skincare for every woman.'", "'We make virtual events easy.'"],
+      },
+    },
+  },
+  // --- LEADER PROMPTS FOR CONTENT IDEATION & CREATION ---
+  {
+    id: 'leader_content_3month_strategy',
+    title: 'Develop 3-Month Marketing Strategy (Advanced)',
+    tier: 'Leader',
+    category: 'Content Ideation & Creation',
+    fullText:
+      "Act as a Chief Marketing Officer (CMO) with deep expertise in strategic planning and AI-driven marketing.\nWe are planning the launch of our new: {{PRODUCT_SERVICE_TO_LAUNCH}}. The niche/target audience is: {{NICHE_TARGET_AUDIENCE}}. The primary business goal for this launch is: {{BUSINESS_GOAL_LAUNCH}}. The available budget level is: {{BUDGET_LEVEL}}. (Optional) Known competitors to consider: {{KNOWN_COMPETITORS_OPTIONAL}}.\n\nPlease develop a high-level 3-month marketing strategy. Include: key phases, major campaign themes, recommended channels, high-impact content types, and a brief rationale for each. Highlight where AI can be leveraged for efficiency or insight.",
+    placeholders: {
+      PRODUCT_SERVICE_TO_LAUNCH: {
+        guidance: "What is the product or service being launched?",
+        examples: ["'AI-powered CRM platform'", "'organic skincare line'", "'virtual event planning service'"],
+      },
+      NICHE_TARGET_AUDIENCE: {
+        guidance: "Who is the specific/niche target audience for this launch?",
+        examples: ["'B2B SaaS founders in fintech'", "'millennial women interested in wellness'", "'HR managers at tech companies'"],
+      },
+      BUSINESS_GOAL_LAUNCH: {
+        guidance: "What is the primary business goal for this launch?",
+        examples: ["'generate 500 qualified leads'", "'achieve $100k in sales'", "'build brand authority in a new market segment'"],
+      },
+      BUDGET_LEVEL: {
+        guidance: "What is the available budget level? (e.g., low, medium, high)",
+        examples: ["'low'", "'medium'", "'high'"],
+      },
+      KNOWN_COMPETITORS_OPTIONAL: {
+        guidance: "(Optional) List any known competitors to consider.",
+        examples: ["'HubSpot, Salesforce'", "'Lush, The Ordinary'", "'Hopin, Eventbrite'"],
+      },
+    },
+  },
+  {
+    id: 'leader_content_campaign_concept',
+    title: 'Multi-Channel Campaign Concept (Advanced)',
+    tier: 'Leader',
+    category: 'Content Ideation & Creation',
+    fullText:
+      "Act as an award-winning Creative Director for a top advertising agency.\nWe need a compelling multi-channel campaign concept to promote our: {{PRODUCT_SERVICE_CAMPAIGN}}. The season/event/timing for this campaign is: {{SEASON_EVENT_TIMING}}. The target audience is: {{TARGET_AUDIENCE_CAMPAIGN}}. The core campaign message is: {{CORE_CAMPAIGN_MESSAGE}}. The brand personality to convey is: {{BRAND_PERSONALITY}}.\n\nPlease develop a big-picture campaign concept. Include: the central creative idea, suggested taglines, recommended channels, and a brief outline of how the concept adapts across 3+ channels. Explain how the campaign will stand out and drive engagement.",
+    placeholders: {
+      PRODUCT_SERVICE_CAMPAIGN: {
+        guidance: "What is the product or service being promoted?",
+        examples: ["'AI-powered CRM platform'", "'organic skincare line'", "'virtual event planning service'"],
+      },
+      SEASON_EVENT_TIMING: {
+        guidance: "What is the season, event, or timing for this campaign?",
+        examples: ["'Spring 2024'", "'Back to School'", "'End-of-year holiday season'"],
+      },
+      TARGET_AUDIENCE_CAMPAIGN: {
+        guidance: "Who is the main target audience for this campaign?",
+        examples: ["'small business owners'", "'millennial women interested in wellness'", "'HR managers at tech companies'"],
+      },
+      CORE_CAMPAIGN_MESSAGE: {
+        guidance: "What is the core message or theme for this campaign?",
+        examples: ["'Empowering growth with AI'", "'Beauty rooted in nature'", "'Seamless virtual experiences'"],
+      },
+      BRAND_PERSONALITY: {
+        guidance: "What brand personality or tone should the campaign convey?",
+        examples: ["'innovative and approachable'", "'luxurious yet accessible'", "'fun and energetic'"],
+      },
+    },
+  },
+  // --- FINAL LEADER PROMPTS FOR CONTENT IDEATION & CREATION ---
+  {
+    id: 'leader_content_sales_data_analysis',
+    title: 'Sales Data Analysis for Strategic Insights (Advanced)',
+    tier: 'Leader',
+    category: 'Content Ideation & Creation',
+    fullText:
+      "Act as a Senior Data Analyst specializing in sales and marketing intelligence.\nWe need to analyze our sales data for the past {{TIME_PERIOD_SALES_DATA}}. The available data points are: {{AVAILABLE_SALES_DATA_POINTS}}. The main objective of this analysis is: {{ANALYSIS_OBJECTIVE}}. The industry context is: {{INDUSTRY_FOR_SALES_ANALYSIS}}.\n\nPlease provide a strategic analysis including: key trends, actionable insights, and 2-3 data-driven recommendations for content or campaign strategy. Highlight any opportunities for AI-driven optimization.",
+    placeholders: {
+      TIME_PERIOD_SALES_DATA: {
+        guidance: "What is the time period for the sales data (e.g., Q1 2024, last 12 months)?",
+        examples: ["'Q1 2024'", "'last 12 months'", "'calendar year 2023'"],
+      },
+      AVAILABLE_SALES_DATA_POINTS: {
+        guidance: "List the available sales data points (e.g., revenue, lead source, conversion rate, etc.).",
+        examples: ["'monthly revenue, lead source, conversion rate, average deal size'", "'product category, region, sales rep performance'"],
+      },
+      ANALYSIS_OBJECTIVE: {
+        guidance: "What is the main objective of this analysis?",
+        examples: ["'identify top-performing channels'", "'find bottlenecks in the sales funnel'", "'uncover new content opportunities'"],
+      },
+      INDUSTRY_FOR_SALES_ANALYSIS: {
+        guidance: "What is the industry context for this analysis?",
+        examples: ["'B2B SaaS'", "'real estate'", "'health & wellness'"],
+      },
+    },
+  },
+  {
+    id: 'leader_content_lead_gen_funnel',
+    title: 'Design AI-Enhanced Lead Gen Funnel (Advanced)',
+    tier: 'Leader',
+    category: 'Content Ideation & Creation',
+    fullText:
+      "Act as a Growth Marketing Architect with expertise in full-funnel strategy and AI optimization.\nWe need to design a comprehensive lead generation funnel for our: {{PRODUCT_SERVICE_FUNNEL}}. The ideal customer profile (ICP) is: {{ICP_DESCRIPTION_FUNNEL}}. The main goal of the funnel is: {{FUNNEL_GOAL}}. (Optional) The typical sales cycle length is: {{SALES_CYCLE_LENGTH_OPTIONAL}}.\n\nPlease outline the funnel stages, recommended content/campaigns for each stage, and where AI can be leveraged for targeting, personalization, or automation. Include 2-3 advanced tactics for maximizing lead quality and conversion.",
+    placeholders: {
+      PRODUCT_SERVICE_FUNNEL: {
+        guidance: "What is the product or service for this lead gen funnel?",
+        examples: ["'AI-powered CRM platform'", "'organic skincare line'", "'virtual event planning service'"],
+      },
+      ICP_DESCRIPTION_FUNNEL: {
+        guidance: "Describe the ideal customer profile (ICP) for this funnel.",
+        examples: ["'mid-sized B2B SaaS companies in fintech'", "'millennial women interested in wellness'", "'HR managers at tech companies'"],
+      },
+      FUNNEL_GOAL: {
+        guidance: "What is the main goal of this funnel?",
+        examples: ["'generate 1,000 qualified leads per quarter'", "'increase demo bookings by 30%'", "'grow email list with high-intent subscribers'"],
+      },
+      SALES_CYCLE_LENGTH_OPTIONAL: {
+        guidance: "(Optional) What is the typical sales cycle length?",
+        examples: ["'30 days'", "'3-6 months'", "'short (impulse purchase)'"],
+      },
+    },
+  },
+  {
+    id: 'dabbler_market_research_competitors',
+    title: 'Identify Top Competitors (Beginner)',
+    tier: 'Dabbler',
+    category: 'Market Research',
+    fullText:
+      "Act as a Market Research Assistant.\nMy business offers: {{PRODUCT_SERVICE_TYPE_COMPETITOR_RESEARCH}}\nThe industry or niche is: {{INDUSTRY_NICHE_COMPETITOR_RESEARCH}}\n(Optional) The geographic market is: {{GEOGRAPHIC_MARKET_OPTIONAL}}\n\nPlease identify the top 3-5 competitors in this space. For each, provide a brief description and what makes them a strong competitor.",
+    placeholders: {
+      PRODUCT_SERVICE_TYPE_COMPETITOR_RESEARCH: {
+        guidance: "Briefly describe your product or service. Be specific about what you offer.",
+        examples: [
+          "'cloud-based accounting software for freelancers'",
+          "'organic pet food for dogs'",
+          "'boutique digital marketing agency'"
+        ]
+      },
+      INDUSTRY_NICHE_COMPETITOR_RESEARCH: {
+        guidance: "What is the main industry or niche?",
+        examples: [
+          "'financial technology'",
+          "'pet nutrition'",
+          "'digital marketing for small businesses'"
+        ]
+      },
+      GEOGRAPHIC_MARKET_OPTIONAL: {
+        guidance: "(Optional) What is the main geographic market? (e.g., country, region, city)",
+        examples: [
+          "'Australia'",
+          "'North America'",
+          "'Sydney metro area'"
+        ]
+      }
+    }
+  },
+  {
+    id: 'dabbler_market_research_pain_points',
+    title: 'Discover Audience Pain Points (Beginner)',
+    tier: 'Dabbler',
+    category: 'Market Research',
+    fullText:
+      "Act as a Customer Insights Analyst.\nMy target audience is: {{TARGET_AUDIENCE_PAIN_POINTS}}\nTheir main goal or problem is: {{AUDIENCE_GOAL_OR_PROBLEM}}\nMy product/service area or context is: {{MY_PRODUCT_SERVICE_AREA_CONTEXT}}\n\nPlease list 5-7 common pain points, frustrations, or unmet needs this audience experiences related to their goal/problem. Suggest 1-2 ways my product/service could address these pain points.",
+    placeholders: {
+      TARGET_AUDIENCE_PAIN_POINTS: {
+        guidance: "Describe your target audience in detail (demographics, role, interests, etc.).",
+        examples: [
+          "'small business owners with 1-10 employees'",
+          "'millennial parents interested in healthy eating'",
+          "'IT managers in mid-sized companies'"
+        ]
+      },
+      AUDIENCE_GOAL_OR_PROBLEM: {
+        guidance: "What is the main goal or problem this audience has?",
+        examples: [
+          "'streamlining their accounting process'",
+          "'finding quick, healthy meal options for kids'",
+          "'keeping company data secure'"
+        ]
+      },
+      MY_PRODUCT_SERVICE_AREA_CONTEXT: {
+        guidance: "Briefly describe your product/service area or the context for these insights.",
+        examples: [
+          "'cloud-based accounting software'",
+          "'organic meal delivery service'",
+          "'cybersecurity consulting'"
+        ]
+      }
+    }
+  },
+  {
+    id: 'dabbler_market_research_competitor_features',
+    title: "List Competitor's Key Features (Beginner)",
+    tier: 'Dabbler',
+    category: 'Market Research',
+    fullText:
+      "Act as a Competitive Intelligence Analyst.\nI need to understand the key features of a competitor's product/service.\nThe competitor's product/service name is: {{COMPETITOR_PRODUCT_NAME}}\n(Optional) The competitor's website is: {{COMPETITOR_WEBSITE_OPTIONAL}}\nThe industry is: {{COMPETITOR_INDUSTRY}}\n\nPlease list the main features, benefits, and any unique selling points of this competitor's offering. Highlight anything that stands out compared to typical products/services in this industry.",
+    placeholders: {
+      COMPETITOR_PRODUCT_NAME: {
+        guidance: "What is the name of the competitor's product or service?",
+        examples: [
+          "'Xero'",
+          "'Blue Buffalo Life Protection Formula'",
+          "'HubSpot Marketing Hub'"
+        ]
+      },
+      COMPETITOR_WEBSITE_OPTIONAL: {
+        guidance: "(Optional) What is the competitor's website?",
+        examples: [
+          "'xero.com'",
+          "'bluebuffalo.com'",
+          "'hubspot.com'"
+        ]
+      },
+      COMPETITOR_INDUSTRY: {
+        guidance: "What is the main industry for this competitor?",
+        examples: [
+          "'accounting software'",
+          "'pet food'",
+          "'marketing automation'"
+        ]
+      }
+    }
+  },
 ];
+
+// --- Recommended Tools Tab Component ---
+function RecommendedToolsTab() {
+  // Simulated user profile
+  const simulatedUserProfile = {
+    aiReadinessTier: 'Enabler', // Change to 'Dabbler', 'Enabler', or 'Leader' to test
+    keyChallengesOrOpportunities: ['personalizing_email_outreach', 'creating_engaging_videos_quickly'],
+  };
+
+  const mainCategories = [
+    'All',
+    'Content Creation',
+    'Video & Audio',
+    'Productivity & Automation',
+    'Sales & Outreach',
+    'Data & Insights',
+    'Social Media',
+    'AI Assistant',
+  ];
+
+  const allCategories = Array.from(new Set(masterToolList.map(t => t.uiCategory)));
+  const allChallenges = Array.from(new Set(masterToolList.flatMap(t => t.solvesChallenges)));
+
+  // Get the top 8 most common challenges
+  const challengeCounts = allChallenges.map(ch => ({
+    name: ch,
+    count: masterToolList.filter(t => t.solvesChallenges.includes(ch)).length
+  }));
+  const sortedChallenges = challengeCounts.sort((a, b) => b.count - a.count).map(c => c.name);
+  const topChallenges = sortedChallenges.slice(0, 8);
+  const moreChallenges = sortedChallenges.slice(8);
+
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [search, setSearch] = useState('');
+  const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [showChallengeInfo, setShowChallengeInfo] = useState(false);
+  const [showCategoryInfo, setShowCategoryInfo] = useState(false);
+
+  // Only show tools for the user's tier
+  const tierFiltered = masterToolList.filter(tool => tool.bestForTiers.includes(simulatedUserProfile.aiReadinessTier));
+
+  // Filter by selected challenges (if any)
+  const challengeFiltered = selectedChallenges.length === 0
+    ? tierFiltered
+    : tierFiltered.filter(tool => tool.solvesChallenges.some(ch => selectedChallenges.includes(ch)));
+
+  // Filter by category
+  const categoryFiltered = selectedCategory === 'All'
+    ? challengeFiltered
+    : challengeFiltered.filter(tool => tool.uiCategory === selectedCategory);
+
+  // Filter by search
+  const filteredTools = categoryFiltered.filter(tool =>
+    tool.toolName.toLowerCase().includes(search.toLowerCase()) ||
+    tool.briefDescription.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="w-full max-w-6xl mx-auto py-10 px-4 md:px-8 animate-fade-in">
+      <div className="mb-10">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#004851] mb-3">Recommended AI Tools for You</h1>
+        <p className="text-lg text-gray-700 max-w-2xl">
+          Based on your AI readiness and identified needs, here are some tools that can help you make significant progress. Our pro tips will guide you on how to get the most out of them!
+        </p>
+      </div>
+      {/* Filter by Challenge */}
+      <div className="mb-2 flex items-center gap-2">
+        <span className="font-semibold text-[#004851] text-base">Filter by Challenge</span>
+        <button
+          aria-label="What is a challenge filter?"
+          className="text-[#68F6C8] hover:text-[#004851] focus:outline-none"
+          onMouseEnter={() => setShowChallengeInfo(true)}
+          onMouseLeave={() => setShowChallengeInfo(false)}
+          onFocus={() => setShowChallengeInfo(true)}
+          onBlur={() => setShowChallengeInfo(false)}
+          tabIndex={0}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#68F6C8" strokeWidth="2" fill="white" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-4m0-4h.01" stroke="#68F6C8" /></svg>
+        </button>
+        {showChallengeInfo && (
+          <span className="ml-2 bg-white border border-gray-200 rounded px-3 py-2 text-xs text-gray-700 shadow-lg absolute z-30">
+            Filter tools by the problem you want to solve (e.g. "Reduce manual tasks").
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2 items-center mb-6">
+        {topChallenges.map(challenge => (
+          <button
+            key={challenge}
+            className={
+              'px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-150 ' +
+              (selectedChallenges.includes(challenge)
+                ? 'bg-[#68F6C8] text-[#004851] border-[#68F6C8] shadow'
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-[#68F6C8]/10 hover:text-[#004851]')
+            }
+            onClick={() => setSelectedChallenges(selectedChallenges.includes(challenge)
+              ? selectedChallenges.filter(c => c !== challenge)
+              : [...selectedChallenges, challenge])}
+            type="button"
+          >
+            {challenge.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+          </button>
+        ))}
+        {moreChallenges.length > 0 && (
+          <div className="relative">
+            <button
+              className="px-3 py-1 rounded-full text-xs font-semibold border bg-white text-gray-700 border-gray-200 hover:bg-[#68F6C8]/10 hover:text-[#004851] ml-2"
+              onClick={() => setShowMoreFilters(v => !v)}
+              type="button"
+            >
+              More Filters
+            </button>
+            {showMoreFilters && (
+              <div className="absolute z-20 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-[180px] max-h-60 overflow-y-auto">
+                {moreChallenges.map(challenge => (
+                  <button
+                    key={challenge}
+                    className={
+                      'block w-full text-left px-3 py-1 rounded text-xs font-semibold border-b border-gray-100 last:border-b-0 ' +
+                      (selectedChallenges.includes(challenge)
+                        ? 'bg-[#68F6C8] text-[#004851]'
+                        : 'bg-white text-gray-700 hover:bg-[#68F6C8]/10 hover:text-[#004851]')
+                    }
+                    onClick={() => setSelectedChallenges(selectedChallenges.includes(challenge)
+                      ? selectedChallenges.filter(c => c !== challenge)
+                      : [...selectedChallenges, challenge])}
+                    type="button"
+                  >
+                    {challenge.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {/* Divider */}
+      <div className="w-full h-[1.5px] bg-gray-100 my-6 rounded" />
+      {/* Filter by Category */}
+      <div className="mb-2 flex items-center gap-2 mt-2">
+        <span className="font-semibold text-[#004851] text-base">Filter by Category</span>
+        <button
+          aria-label="What is a category filter?"
+          className="text-[#68F6C8] hover:text-[#004851] focus:outline-none"
+          onMouseEnter={() => setShowCategoryInfo(true)}
+          onMouseLeave={() => setShowCategoryInfo(false)}
+          onFocus={() => setShowCategoryInfo(true)}
+          onBlur={() => setShowCategoryInfo(false)}
+          tabIndex={0}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#68F6C8" strokeWidth="2" fill="white" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-4m0-4h.01" stroke="#68F6C8" /></svg>
+        </button>
+        {showCategoryInfo && (
+          <span className="ml-2 bg-white border border-gray-200 rounded px-3 py-2 text-xs text-gray-700 shadow-lg absolute z-30">
+            Browse tools by type or function (e.g. "Content Creation").
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-3 items-center mb-8">
+        {mainCategories.map(cat => (
+          <button
+            key={cat}
+            className={
+              'px-6 py-2 rounded-full font-semibold text-base transition-all duration-150 ' +
+              (selectedCategory === cat
+                ? 'bg-[#004851] text-white shadow-lg border-2 border-[#68F6C8] scale-105'
+                : 'bg-gray-100 text-[#004851] border border-gray-200 hover:bg-[#68F6C8]/10 hover:text-[#004851]')
+            }
+            onClick={() => setSelectedCategory(cat)}
+            type="button"
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+      {/* Search bar */}
+      <div className="mb-8 flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <input
+          type="text"
+          placeholder="Search tools..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full sm:w-72 px-4 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-[#68F6C8] focus:outline-none text-base"
+        />
+      </div>
+      {/* Tool Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredTools.length === 0 ? (
+          <div className="col-span-full text-center text-gray-400 py-16 text-lg">No tools found for your selection.</div>
+        ) : (
+          filteredTools.map((tool) => (
+            <ToolCard key={tool.id} tool={tool} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function LearningHubPage() {
   const [activeSection, setActiveSection] = useState('Checklists');
   const [selectedChecklistTitle, setSelectedChecklistTitle] = useState<string | null>(null);
-  const [currentUserTier, setCurrentUserTier] = useState<'Dabbler' | 'Enabler' | 'Leader'>('Dabbler');
+  // TODO: Support Enabler and Leader when their data is added to trackableItems
+  const [currentUserTier, setCurrentUserTier] = useState<'Dabbler'>('Dabbler');
 
   // --- Prompt Library State ---
   const [selectedPromptTier, setSelectedPromptTier] = useState<'All' | 'Dabbler' | 'Enabler' | 'Leader'>('All');
@@ -1154,7 +1795,7 @@ export default function LearningHubPage() {
               })}
             </div>
           </div>
-          <CopyPromptButton promptText={buildFinalPrompt(selectedPromptDetail.fullText, customizedPromptValues)} />
+          <CopyPromptButton promptText={buildFinalPrompt(selectedPromptDetail.fullText, customizedPromptValues)} promptId={selectedPromptDetail.id} />
         </div>
       );
     }
@@ -1217,7 +1858,7 @@ export default function LearningHubPage() {
   };
 
   // --- Copy Prompt Button ---
-  function CopyPromptButton({ promptText }: { promptText: string }) {
+  function CopyPromptButton({ promptText, promptId }: { promptText: string; promptId: string }) {
     const [copied, setCopied] = useState(false);
     return (
       <button
@@ -1225,6 +1866,7 @@ export default function LearningHubPage() {
         onClick={async () => {
           await navigator.clipboard.writeText(promptText);
           setCopied(true);
+          handlePromptCopy(promptId);
           setTimeout(() => setCopied(false), 1200);
         }}
         type="button"
@@ -1279,7 +1921,7 @@ export default function LearningHubPage() {
             <li key={title}>
               <button
                 className="w-full text-left bg-white border border-[#68F6C8] rounded-lg px-5 py-4 shadow-sm hover:bg-[#68F6C8] hover:text-[#004851] transition-colors font-semibold text-[#004851] text-base focus:outline-none focus:ring-2 focus:ring-[#68F6C8]"
-                onClick={() => setSelectedChecklistTitle(title)}
+                onClick={() => handleChecklistView(title)}
               >
                 {title}
               </button>
@@ -1299,12 +1941,171 @@ export default function LearningHubPage() {
     </div>
   );
 
+  // --- Recommended Tools Render Logic ---
+  const renderToolsContent = () => {
+    // Simulated user profile
+    const simulatedUserProfile = {
+      aiReadinessTier: 'Enabler', // Change to 'Dabbler', 'Enabler', or 'Leader' to test
+      keyChallengesOrOpportunities: ['personalizing_email_outreach', 'creating_engaging_videos_quickly'],
+    };
+
+    const mainCategories = [
+      'All',
+      'Content Creation',
+      'Video & Audio',
+      'Productivity & Automation',
+      'Sales & Outreach',
+      'Data & Insights',
+      'Social Media',
+      'AI Assistant',
+    ];
+
+    const allCategories = Array.from(new Set(masterToolList.map(t => t.uiCategory)));
+    const allChallenges = Array.from(new Set(masterToolList.flatMap(t => t.solvesChallenges)));
+
+    // Get the top 8 most common challenges
+    const challengeCounts = allChallenges.map(ch => ({
+      name: ch,
+      count: masterToolList.filter(t => t.solvesChallenges.includes(ch)).length
+    }));
+    const sortedChallenges = challengeCounts.sort((a, b) => b.count - a.count).map(c => c.name);
+    const topChallenges = sortedChallenges.slice(0, 8);
+    const moreChallenges = sortedChallenges.slice(8);
+
+    const [selectedCategory, setSelectedCategory] = useState('All');
+    const [search, setSearch] = useState('');
+    const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
+    const [showMoreFilters, setShowMoreFilters] = useState(false);
+
+    // Only show tools for the user's tier
+    const tierFiltered = masterToolList.filter(tool => tool.bestForTiers.includes(simulatedUserProfile.aiReadinessTier));
+
+    // Filter by selected challenges (if any)
+    const challengeFiltered = selectedChallenges.length === 0
+      ? tierFiltered
+      : tierFiltered.filter(tool => tool.solvesChallenges.some(ch => selectedChallenges.includes(ch)));
+
+    // Filter by category
+    const categoryFiltered = selectedCategory === 'All'
+      ? challengeFiltered
+      : challengeFiltered.filter(tool => tool.uiCategory === selectedCategory);
+
+    // Filter by search
+    const filteredTools = categoryFiltered.filter(tool =>
+      tool.toolName.toLowerCase().includes(search.toLowerCase()) ||
+      tool.briefDescription.toLowerCase().includes(search.toLowerCase())
+    );
+
+    return (
+      <div className="w-full max-w-6xl mx-auto py-10 px-4 md:px-8 animate-fade-in">
+        <div className="mb-10">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#004851] mb-3">Recommended AI Tools for You</h1>
+          <p className="text-lg text-gray-700 max-w-2xl">
+            Based on your AI readiness and identified needs, here are some tools that can help you make significant progress. Our pro tips will guide you on how to get the most out of them!
+          </p>
+        </div>
+        {/* Search bar */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <input
+            type="text"
+            placeholder="Search tools..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full sm:w-72 px-4 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-[#68F6C8] focus:outline-none text-base"
+          />
+          {/* Key Challenges Multi-select */}
+          <div className="flex flex-wrap gap-2 items-center">
+            {topChallenges.map(challenge => (
+              <button
+                key={challenge}
+                className={
+                  'px-3 py-1 rounded-full text-xs font-semibold border transition-all ' +
+                  (selectedChallenges.includes(challenge)
+                    ? 'bg-[#68F6C8] text-[#004851] border-[#68F6C8]'
+                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-[#68F6C8]/20 hover:text-[#004851]')
+                }
+                onClick={() => setSelectedChallenges(selectedChallenges.includes(challenge)
+                  ? selectedChallenges.filter(c => c !== challenge)
+                  : [...selectedChallenges, challenge])}
+                type="button"
+              >
+                {challenge.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </button>
+            ))}
+            {moreChallenges.length > 0 && (
+              <div className="relative">
+                <button
+                  className="px-3 py-1 rounded-full text-xs font-semibold border bg-gray-100 text-gray-700 border-gray-200 hover:bg-[#68F6C8]/20 hover:text-[#004851] ml-2"
+                  onClick={() => setShowMoreFilters(v => !v)}
+                  type="button"
+                >
+                  More Filters
+                </button>
+                {showMoreFilters && (
+                  <div className="absolute z-20 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-[180px] max-h-60 overflow-y-auto">
+                    {moreChallenges.map(challenge => (
+                      <button
+                        key={challenge}
+                        className={
+                          'block w-full text-left px-3 py-1 rounded text-xs font-semibold border-b border-gray-100 last:border-b-0 ' +
+                          (selectedChallenges.includes(challenge)
+                            ? 'bg-[#68F6C8] text-[#004851]'
+                            : 'bg-white text-gray-700 hover:bg-[#68F6C8]/20 hover:text-[#004851]')
+                        }
+                        onClick={() => setSelectedChallenges(selectedChallenges.includes(challenge)
+                          ? selectedChallenges.filter(c => c !== challenge)
+                          : [...selectedChallenges, challenge])}
+                        type="button"
+                      >
+                        {challenge.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Category Tabs */}
+        <div className="sticky top-0 z-10 bg-white mb-8 flex flex-wrap gap-2 border-b border-gray-100 pb-2">
+          {mainCategories.map(cat => (
+            <button
+              key={cat}
+              className={
+                'px-4 py-2 rounded-full font-semibold text-sm transition-all ' +
+                (selectedCategory === cat
+                  ? 'bg-[#68F6C8] text-[#004851] shadow'
+                  : 'bg-gray-100 text-gray-700 hover:bg-[#68F6C8]/20 hover:text-[#004851]')
+              }
+              onClick={() => setSelectedCategory(cat)}
+              type="button"
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+        {/* Tool Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTools.length === 0 ? (
+            <div className="col-span-full text-center text-gray-400 py-16 text-lg">No tools found for your selection.</div>
+          ) : (
+            filteredTools.map((tool) => (
+              <ToolCard key={tool.id} tool={tool} />
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Main content area logic
   let mainContent;
   if (activeSection === 'Checklists') {
     mainContent = renderChecklistsContent();
   } else if (activeSection === 'Prompt Library') {
     mainContent = renderPromptLibraryContent();
+  } else if (activeSection === 'Recommended Tools') {
+    mainContent = <RecommendedToolsTab />;
   } else {
     mainContent = renderPlaceholderContent(activeSection);
   }
@@ -1335,119 +2136,61 @@ export default function LearningHubPage() {
     );
   }
 
+  // --- Progress calculation ---
+  function calculateProgress(tier: keyof typeof trackableItems) {
+    const items = trackableItems[tier] || [];
+    let completed = 0;
+    for (const item of items) {
+      if (item.type === 'checklist') {
+        if (localStorage.getItem('SG_progress_' + item.id + '_viewed') === 'true') completed++;
+      } else if (item.type === 'prompt') {
+        if (localStorage.getItem('SG_progress_' + item.id + '_copied') === 'true') completed++;
+      }
+    }
+    return items.length > 0 ? Math.round((completed / items.length) * 100) : 0;
+  }
+
+  // --- On mount and tier change, update progress and tip ---
+  useEffect(() => {
+    setProgressPercent(calculateProgress(currentUserTier));
+    setTipText(getTipOfTheDay());
+  }, [currentUserTier]);
+
+  // --- Helper to update progress after interaction ---
+  function updateProgressBar() {
+    setProgressPercent(calculateProgress(currentUserTier));
+  }
+
+  // --- Checklist view tracking ---
+  function handleChecklistView(title: string) {
+    try {
+      localStorage.setItem('SG_progress_' + title + '_viewed', 'true');
+    } catch {}
+    updateProgressBar();
+    setSelectedChecklistTitle(title);
+  }
+
+  // --- Prompt copy tracking ---
+  function handlePromptCopy(promptId: string) {
+    try {
+      localStorage.setItem('SG_progress_' + promptId + '_copied', 'true');
+    } catch {}
+    updateProgressBar();
+  }
+
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [tipText, setTipText] = useState(tips[0]);
+
   return (
-    <div className="min-h-screen bg-[#f8faf9] font-sans flex flex-col">
-      {/* Main Title */}
-      <header className="w-full px-8 py-10 bg-white border-b border-gray-100 shadow-sm">
-        <h1 className="text-3xl sm:text-4xl font-bold text-[#004851] tracking-tight text-center">
-          Social Garden AI Learning Hub
-        </h1>
-      </header>
-      {/* Two-column layout */}
-      <div className="flex flex-1 max-w-7xl mx-auto mt-10 rounded-3xl shadow-2xl overflow-hidden bg-white min-h-[700px]">
-        {/* Sidebar */}
-        <aside className="w-80 bg-[#004851] flex flex-col justify-between py-10 px-8 min-h-full relative overflow-hidden">
-          {/* Subtle background pattern */}
-          <div className="absolute inset-0 opacity-10 pointer-events-none select-none" style={{background: 'radial-gradient(circle at 30% 20%, #68F6C8 0%, transparent 60%)'}} />
-          {/* Top: User greeting and progress */}
-          <div className="z-10 relative">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 rounded-full bg-[#68F6C8] flex items-center justify-center text-[#004851] font-extrabold text-2xl shadow-lg border-4 border-white">
-                {user.avatar ? <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" /> : user.name[0]}
-              </div>
-              <div>
-                <div className="text-white text-lg font-bold leading-tight">Welcome, {user.name}!</div>
-                <div className="text-[#68F6C8] text-xs font-semibold">AI Tier: {user.tier}</div>
-              </div>
-            </div>
-            {/* Progress bar */}
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-[#68F6C8] font-semibold">Learning Progress</span>
-                <span className="text-xs text-white font-semibold">{Math.round(user.progress * 100)}%</span>
-              </div>
-              <div className="w-full h-2 bg-[#68F6C8]/20 rounded-full">
-                <div className="h-full bg-[#68F6C8] rounded-full transition-all duration-500" style={{width: `${user.progress * 100}%`}} />
-              </div>
-            </div>
-            {/* Tip of the Day */}
-            <div className="bg-[#68F6C8]/10 border border-[#68F6C8]/30 rounded-xl p-4 mb-8 flex items-center gap-3 shadow-sm">
-              <div>{tipOfTheDay.icon}</div>
-              <div className="text-[#68F6C8] text-sm font-semibold">Tip of the Day</div>
-            </div>
-            <div className="text-white text-sm leading-relaxed mb-8 italic flex items-center gap-2">
-              <svg className="w-4 h-4 text-[#68F6C8]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-6a2 2 0 012-2h2a2 2 0 012 2v6" /></svg>
-              {tipOfTheDay.text}
-            </div>
-            {/* Navigation */}
-            <nav className="flex flex-col gap-2 mt-2">
-              {sidebarLinks.map((link) => (
-                <button
-                  key={link.title}
-                  className={
-                    'flex items-center rounded-lg px-5 py-4 font-semibold text-lg transition-all duration-150 text-left ' +
-                    (activeSection === link.title
-                      ? 'bg-[#68F6C8] text-[#004851] font-bold border-l-4 border-[#68F6C8] shadow-md'
-                      : 'text-white bg-transparent hover:bg-[#68F6C8]/20 hover:text-[#68F6C8]') +
-                    ' focus:outline-none focus:ring-2 focus:ring-[#68F6C8]'
-                  }
-                  tabIndex={0}
-                  onClick={() => {
-                    setActiveSection(link.title);
-                    setSelectedChecklistTitle(null); // Reset checklist selection when switching sections
-                  }}
-                >
-                  {navIcons[link.title]}
-                  {link.title}
-                </button>
-              ))}
-            </nav>
-          </div>
-          {/* Footer: logo, socials, support */}
-          <div className="z-10 relative mt-10 pt-8 border-t border-white/20 flex flex-col items-center gap-3">
-            {/* Placeholder for Social Garden logo */}
-            <div className="mb-1">
-              <div className="w-12 h-12 rounded-full bg-[#68F6C8] flex items-center justify-center shadow-md">
-                <span className="text-[#004851] font-extrabold text-2xl">SG</span>
-              </div>
-            </div>
-            <div className="flex gap-3 mb-1">
-              {socialLinks.map((s, i) => (
-                <a key={i} href={s.href} target="_blank" rel="noopener noreferrer" className="text-[#68F6C8] hover:text-white transition-colors">{s.icon}</a>
-              ))}
-            </div>
-            <a
-              href="https://www.socialgarden.com.au/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#68F6C8] text-xs font-semibold hover:underline mb-1"
-            >
-              © {new Date().getFullYear()} Social Garden
-            </a>
-            <a href="mailto:support@socialgarden.com.au" className="text-white text-xs hover:underline">Need help? Contact support</a>
-          </div>
-        </aside>
-        {/* Main Content Area */}
-        <main className="flex-1 bg-gray-50 px-8 md:px-12 py-12 md:py-16 flex flex-col justify-start items-center min-h-[700px]">
-          {/* Tier Selector */}
-          <div className="mb-8 flex items-center gap-4">
-            <label htmlFor="tier-select" className="text-[#004851] font-semibold text-lg">Simulate User Tier:</label>
-            <select
-              id="tier-select"
-              value={currentUserTier}
-              onChange={e => setCurrentUserTier(e.target.value as 'Dabbler' | 'Enabler' | 'Leader')}
-              className="p-2 rounded-lg border border-[#68F6C8] bg-white text-[#004851] font-semibold focus:ring-2 focus:ring-[#68F6C8] focus:outline-none shadow-sm"
-            >
-              <option value="Dabbler">Dabbler</option>
-              <option value="Enabler">Enabler</option>
-              <option value="Leader">Leader</option>
-            </select>
-          </div>
-          {/* Placeholder for future personalized welcome message */}
-          {/* <div className="mb-8">Hello [User's Name], based on your results as an [AI Tier] in [Industry]...</div> */}
-          {mainContent}
-        </main>
-      </div>
+    <div className="flex min-h-screen bg-[#004851]/5">
+      {/* Sidebar */}
+      <aside className="w-[320px] bg-[#004851] p-8 flex-shrink-0 relative z-20">
+        <SidebarNav user={user} activeSection={activeSection} onSectionChange={setActiveSection} />
+      </aside>
+      {/* Main Content */}
+      <main className="flex-1 p-10 overflow-y-auto">
+        {mainContent}
+      </main>
     </div>
   );
 } 

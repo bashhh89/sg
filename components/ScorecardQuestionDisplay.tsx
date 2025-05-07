@@ -12,6 +12,11 @@ interface ScorecardQuestionDisplayProps {
   maxQuestions: number; // The total expected questions (~20)
   assessmentPhases: string[]; // Array of phase names for timeline display
   reasoningText?: string; // Added reasoning text prop
+  isAutoCompleting: boolean;
+  setIsAutoCompleting: (val: boolean) => void;
+  setAutoCompleteError: (msg: string | null) => void;
+  handleStartAutoComplete: () => void;
+  overallStatus: string;
 }
 
 const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
@@ -24,24 +29,59 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
   currentQuestionNumber,
   maxQuestions,
   assessmentPhases,
-  reasoningText
+  reasoningText,
+  isAutoCompleting,
+  setIsAutoCompleting,
+  setAutoCompleteError,
+  handleStartAutoComplete,
+  overallStatus
 }) => {
+  // Add a function to map between API answerType and component answerType
+  const normalizeAnswerType = (apiAnswerType: string): string => {
+    console.log('Normalizing API answer type:', apiAnswerType);
+    
+    // Handle null or undefined
+    if (!apiAnswerType) return 'text';
+    
+    const type = apiAnswerType.toLowerCase();
+    
+    if (type === 'radio') return 'radio';
+    if (type === 'checkbox') return 'checkbox';
+    if (type === 'scale') return 'scale';
+    if (type === 'text') return 'text';
+    
+    // Handle possible mismatches between API and component
+    if (type === 'single-choice') return 'radio';
+    if (type === 'multiple-choice') return 'checkbox';
+    
+    console.log('Unknown answer type, defaulting to text:', apiAnswerType);
+    return 'text'; // Default to text input if unknown
+  };
+
+  // Normalize the answerType for component use
+  const normalizedAnswerType = normalizeAnswerType(answerType);
+  
   // State to hold the user's current answer before submission
-  const [currentAnswer, setCurrentAnswer] = useState<any>(answerType === 'multiple-choice' ? [] : '');
+  const [currentAnswer, setCurrentAnswer] = useState<any>(normalizedAnswerType === 'checkbox' ? [] : '');
   
   // Use the typing effect for reasoning text
   const { displayedText, isComplete } = useTypingEffect(reasoningText, 30);
   
+  // Log reasoning text for debugging
+  useEffect(() => {
+    console.log('Reasoning text received:', reasoningText ? reasoningText.substring(0, 50) + '...' : 'None');
+  }, [reasoningText]);
+  
   // Reset the answer when the question or answer type changes
   useEffect(() => {
-    if (answerType === 'multiple-choice') {
+    if (normalizedAnswerType === 'checkbox') {
       setCurrentAnswer([]); // Reset to empty array for checkboxes
     } else {
       setCurrentAnswer(''); // Reset to empty string for text, radio, scale
     }
-  }, [question, answerType]);
+  }, [question, normalizedAnswerType]);
   
-  // Handle multiple-choice answers (checkboxes)
+  // Handle checkbox answers (multiple-choice)
   const handleMultiChoiceChange = (option: string, checked: boolean) => {
     setCurrentAnswer((prev: string[]) => {
       if (checked) {
@@ -54,7 +94,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
   
   // Render the appropriate input based on answerType
   const renderAnswerInput = () => {
-    switch (answerType) {
+    switch (normalizedAnswerType) {
       case 'text':
         return (
           <textarea
@@ -65,7 +105,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
             disabled={isLoading}
           />
         );
-      case 'single-choice':
+      case 'radio':
         return (
           <div className="flex flex-col gap-3">
             {options?.map((option) => {
@@ -98,7 +138,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
             })}
           </div>
         );
-      case 'multiple-choice':
+      case 'checkbox':
         return (
           <div className="flex flex-col gap-3">
             {options?.map((option) => {
@@ -163,24 +203,124 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
           </div>
         );
       default:
-        return <p style={{ color: 'red', marginTop: '10px' }}>Error: Unsupported answer type '{answerType}'</p>;
+        return <p style={{ color: 'red', marginTop: '10px' }}>Error: Unsupported answer type '{normalizedAnswerType}'</p>;
     }
   };
   
   // Determine if the submit button should be disabled
   const isAnswerValid = () => {
-    if (answerType === 'multiple-choice') {
+    // Handle different answer types
+    if (normalizedAnswerType === 'checkbox') {
       // Check if it's an array and has items
       return Array.isArray(currentAnswer) && currentAnswer.length > 0;
-    } else if (typeof currentAnswer === 'string') {
-      // Check if it's a non-empty string after trimming
-      return currentAnswer.trim() !== '';
+    } else if (normalizedAnswerType === 'radio') {
+      // For radio, just check if it's not an empty string
+      return typeof currentAnswer === 'string' && currentAnswer !== '';
+    } else if (normalizedAnswerType === 'scale') {
+      // For scale, just check if it's not an empty string
+      return typeof currentAnswer === 'string' && currentAnswer !== '';
+    } else if (normalizedAnswerType === 'text') {
+      // For text, check if it's a string and not empty after trimming
+      return typeof currentAnswer === 'string' && currentAnswer.trim() !== '';
     }
+    
     // Default to invalid if type is unexpected
     return false;
   };
   
   const isSubmitDisabled = isLoading || !isAnswerValid();
+  
+  // Add local state for visual cue
+  const [isAutoAnswering, setIsAutoAnswering] = useState(false);
+  const [autoCompleteCount, setAutoCompleteCount] = useState(0);
+  
+  // Auto-complete functionality
+  useEffect(() => {
+    // Don't proceed if auto-complete is not active or if we're already loading
+    if (!isAutoCompleting || isLoading) return;
+    
+    // Stop if assessment is complete or max questions reached
+    if (overallStatus === 'completed' || 
+        overallStatus === 'assessment-completed' || 
+        overallStatus === 'results-generated' ||
+        autoCompleteCount >= 30) {
+      console.log('Auto-complete stopping due to completion or max count, status:', overallStatus);
+      setIsAutoCompleting(false);
+      return;
+    }
+    
+    // If there's a current question, process it
+    if (question) {
+      console.log('Auto-complete processing question:', question.substring(0, 30));
+      console.log('Question details:', {
+        answerType: answerType,
+        options: options ? options.slice(0, 2).join(', ') + (options.length > 2 ? '...' : '') : 'none',
+        phase: currentPhaseName,
+        status: overallStatus
+      });
+      
+      // Define a variable to hold the answer with appropriate type
+      let autoAnswer: string | string[] = '';
+      
+      try {
+        // Use a basic and direct approach based on answer type
+        const type = (answerType || '').toLowerCase();
+        
+        if (type === 'radio') {
+          // Radio buttons - choose first option
+          autoAnswer = options && options.length > 0 ? options[0] : '';
+          console.log('Selected radio option:', autoAnswer);
+        }
+        else if (type === 'checkbox') {
+          // Checkbox - select first two options if available
+          autoAnswer = options && options.length > 0 
+            ? (options.length > 1 ? [options[0], options[1]] : [options[0]])
+            : [];
+          console.log('Selected checkbox options:', autoAnswer);
+        }
+        else if (type === 'scale') {
+          // Scale - select middle option
+          autoAnswer = options && options.length > 0 ? options[Math.floor(options.length / 2)] : '';
+          console.log('Selected scale option:', autoAnswer);
+        }
+        else {
+          // Text or any other type - provide generic answer
+          autoAnswer = 'This is an automated response for the AI efficiency assessment test.';
+          console.log('Generated text answer for type:', type);
+        }
+        
+        // Set the answer and prepare for submission
+        setCurrentAnswer(autoAnswer);
+        setIsAutoAnswering(true);
+        
+        // Wait a short delay then submit
+        const timer = setTimeout(() => {
+          if (!isLoading) {
+            console.log('Auto-complete submitting answer:', 
+                       typeof autoAnswer === 'string' ? autoAnswer : JSON.stringify(autoAnswer));
+            
+            onSubmitAnswer(autoAnswer);
+            setAutoCompleteCount(prev => prev + 1);
+            setIsAutoAnswering(false);
+          } else {
+            console.log('Auto-complete skipping submission due to loading state');
+          }
+        }, 2000); // Longer delay to ensure state updates properly
+        
+        return () => clearTimeout(timer);
+      } catch (error: unknown) {
+        console.error('Error in auto-complete processing:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setAutoCompleteError(`Auto-complete error: ${errorMessage}`);
+        setIsAutoCompleting(false);
+      }
+    }
+  }, [isAutoCompleting, question, answerType, options, isLoading, overallStatus]);
+  
+  // Reset counter when auto-complete starts/stops
+  useEffect(() => {
+    if (!isAutoCompleting) setAutoCompleteCount(0);
+  }, [isAutoCompleting]);
   
   return (
     <div className="w-full max-w-4xl mx-auto font-sans">
@@ -238,30 +378,70 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
             
             <td style={{ width: '275px', verticalAlign: 'top', padding: '20px', borderRight: '1px solid #e5e7eb', background: 'white' }}>
               <div style={{ textAlign: 'center', marginBottom: '20px', color: '#0a3d3d', fontWeight: 600, fontSize: '1.08rem', letterSpacing: '0.01em' }}>
-                AI Processing
+                AI Thinking Process
               </div>
-              {reasoningText && (
+              {reasoningText ? (
                 <div style={{
                   padding: '18px',
                   backgroundColor: '#0a3d3d',
                   color: 'white',
                   fontStyle: 'italic',
                   borderRadius: '12px',
-                  fontSize: '1rem',
+                  fontSize: '0.95rem',
+                  lineHeight: '1.5',
                   boxShadow: '0 2px 12px 0 rgba(10,61,61,0.10)',
                   border: '2px solid #A6F4C5',
-                  minHeight: '120px',
+                  height: '200px', // Fixed height
+                  maxHeight: '200px', // Maximum height
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-start',
+                  alignItems: 'flex-start',
+                  marginBottom: '8px',
+                  position: 'relative',
+                  overflow: 'hidden' // Hide overflow content
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '5px', color: '#A6F4C5', fontStyle: 'normal', fontSize: '1.08rem' }}>
+                    <span style={{ marginRight: '4px' }}>💭</span> AI Reasoning:
+                  </div>
+                  <div style={{ 
+                    overflowY: 'auto', 
+                    width: '100%', 
+                    height: '160px',
+                    paddingRight: '8px',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#A6F4C5 #0a3d3d'
+                  }}>
+                    {displayedText}
+                    {!isComplete && <span style={{ marginLeft: '4px' }}>▋</span>}
+                  </div>
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '30px',
+                    background: 'linear-gradient(to bottom, transparent, #0a3d3d)',
+                    pointerEvents: 'none'
+                  }}></div>
+                </div>
+              ) : (
+                <div style={{
+                  padding: '18px',
+                  backgroundColor: '#f5f7f7',
+                  color: '#666',
+                  fontStyle: 'italic',
+                  borderRadius: '12px',
+                  fontSize: '1rem',
+                  height: '200px', // Match height with the reasoning container
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'center',
-                  alignItems: 'flex-start',
+                  alignItems: 'center',
                   marginBottom: '8px',
+                  border: '1px dashed #ccc'
                 }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '5px', color: '#A6F4C5', fontStyle: 'normal', fontSize: '1.08rem' }}>
-                    AI thinking...
-                  </div>
-                  {displayedText}
-                  {!isComplete && <span style={{ marginLeft: '4px' }}>▋</span>}
+                  AI thinking process will appear here...
                 </div>
               )}
             </td>
@@ -279,7 +459,29 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
               <div style={{ marginBottom: '24px' }}>
                 {renderAnswerInput()}
               </div>
+              {/* Auto-Complete Button for Testing */}
               <button
+                onClick={handleStartAutoComplete}
+                disabled={isAutoCompleting || isLoading}
+                style={{
+                  background: '#f59e42',
+                  color: '#fff',
+                  fontSize: '0.95rem',
+                  borderRadius: '6px',
+                  padding: '0.5rem 1.2rem',
+                  marginBottom: '1rem',
+                  marginLeft: 'auto',
+                  display: 'block',
+                  opacity: isAutoCompleting || isLoading ? 0.6 : 1,
+                  cursor: isAutoCompleting || isLoading ? 'not-allowed' : 'pointer',
+                  border: 'none',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.07)'
+                }}
+              >
+                {isAutoCompleting ? 'Auto-Completing...' : 'Auto-Complete Assessment (Testing Only)'}
+              </button>
+              <button
+                data-testid="scorecard-submit-btn"
                 onClick={() => onSubmitAnswer(currentAnswer)}
                 disabled={isSubmitDisabled}
                 className={
@@ -290,7 +492,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
                 }
                 style={{ letterSpacing: '0.01em' }}
               >
-                {isLoading ? 'Submitting...' : 'Submit Answer'}
+                {isAutoAnswering ? `Auto-Answering...` : isLoading ? 'Submitting...' : 'Submit Answer'}
               </button>
             </td>
           </tr>
