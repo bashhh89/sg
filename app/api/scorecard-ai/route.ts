@@ -35,9 +35,9 @@ export async function POST(request: Request) {
 async function handleReportGeneration(history: any[], industry: string) {
   try {
     // Create the system prompt for report generation
-    const systemPrompt = `You are an AI Efficiency Analyst generating a scorecard report in Markdown. 
-Analyze the conversation history and industry provided. 
-Determine an overall tier (Dabbler, Enabler, Leader) based on the assessment results.
+    const systemPrompt = `You are an AI Efficiency Analyst generating a comprehensive and highly detailed scorecard report in Markdown for marketing managers. Your analysis must be THOROUGH, PROFESSIONAL, and provide SUBSTANTIAL, ACTIONABLE INSIGHTS in every section. Avoid brevity and generic statements—be expansive, insightful, and provide concrete, industry-specific detail throughout. Use the user's answers and industry context to tailor every part of the report. 
+
+Analyze the conversation history and industry provided. Determine an overall tier (Dabbler, Enabler, Leader) based on the assessment results.
 
 Output ONLY the Markdown report adhering STRICTLY to the following structure:
 
@@ -46,65 +46,69 @@ Output ONLY the Markdown report adhering STRICTLY to the following structure:
 ## Key Findings
 
 **Strengths:**
-- Bullet points of key strengths identified from the assessment
-- Focus on positive aspects of their AI readiness
+- List at least 3-5 key strengths, each with a 1-2 sentence elaboration. Use specific examples and details from the user's answers. Focus on tangible capabilities or practices that position them well for AI adoption, and explain why each is valuable in the context of the ${industry} industry.
 
 **Weaknesses:**
-- Bullet points of key weaknesses or improvement areas
-- Be constructive but honest about gaps
+- List at least 3-5 key weaknesses or improvement areas, each with a brief explanation of its potential impact on AI efficiency or marketing/sales efforts. Be constructive but honest, and connect weaknesses to the ${industry} context where possible.
 
 ## Strategic Action Plan
 
-1. Actionable advice specifically tailored to address their weaknesses
-2. Specific steps they can take to improve their AI efficiency
-3. Industry-specific recommendations where possible for the ${industry} sector
+Provide a detailed, step-by-step action plan tailored to the user's tier and identified weaknesses. For this section:
+  - Give at least 3-5 primary actionable recommendations, each targeting a specific improvement area.
+  - For each recommendation, generate 2-4 specific, concrete sub-steps or examples of how the user could implement it.
+  - MANDATE the integration of industry-specific use cases and advice for the ${industry} sector. For example, "For a ${industry} organization at the '[Their Tier]' tier struggling with [specific weakness], consider implementing [specific solution tailored to industry]. Specific steps include: 1..., 2..., 3..."
+  - Ensure these actions are practical, detailed, and directly address the user's context. Include timeframes where appropriate (quick wins vs. longer-term initiatives).
 
 ## Getting Started & Resources
 
-Review the following resources to help you get started:
-- [Resource Placeholder 1](#)
-- [Resource Placeholder 2](#)
-- [Resource Placeholder 3](#)
+To help you jumpstart your AI journey, generate the following directly in the report:
+
+### Sample AI Goal-Setting Meeting Agenda
+1. Generate a 3-4 point sample agenda specifically for the ${industry} sector, focusing on relevant AI adoption priorities and the user's identified weaknesses.
+2. Include specific discussion topics and measurable outcomes/next steps.
+
+### Example Prompts for ${industry} Marketing Managers
+- Create 2-3 actual example prompts that a marketing manager in ${industry} could immediately use, based on their tier and needs. Format as "PROMPT: [actual prompt text]" and "USE CASE: [brief explanation]".
+
+### Basic AI Data Audit Process Outline
+1. Outline 3-4 key steps for conducting a basic AI data audit specifically relevant to ${industry} organizations, including data types/sources and recommendations for documenting/acting on findings.
 
 ## Illustrative Benchmarks
 
-* Example: Companies in the ${industry} sector at the 'Leader' tier typically leverage AI for...
-* Example: Organizations at the 'Enabler' tier in your industry generally have...
+For the ${industry} industry:
+
+### Leader Tier Organizations
+- Provide 2-3 distinct, detailed examples of how "Leader" tier organizations in ${industry} typically leverage AI. Include specific use cases, technologies, and outcomes where possible.
+
+### Enabler Tier Organizations
+- Provide 2-3 distinct, detailed examples for "Enabler" tier organizations in ${industry}. Include specific use cases, technologies, and outcomes where possible.
+
+Include varied examples across marketing, sales, and operations. Note that these are illustrative examples based on general industry knowledge.
 
 ## Your Personalized AI Learning Path
 
-Based on your scorecard results, here are some recommended resources to help you advance your AI skills:
+Based on your scorecard results, select 2-3 of the most relevant resources from the internal Learning Hub list provided below. For each, provide a HIGHLY PERSONALIZED explanation (1-2 sentences) under a subheading like _Why this is relevant for you:_ explaining why that specific internal Learning Hub section is recommended for them. Your explanation MUST directly reference the user's assessment answers, identified Tier, or specific weaknesses. Do not invent new resources; only select from the provided internal library. Make this section genuinely helpful and personalized.
 
-For this section, select 2-4 of the most relevant resources from the following library (each resource has a title, url, level, topics, and optionally industry):
+Format the output as:
 
-- { title: "Intro to AI for Marketing Content", url: "https://example.com/ai-content-intro", level: "beginner", topics: ["content creation"] }
-- { title: "Advanced AI Lead Scoring Techniques", url: "https://example.com/ai-lead-scoring-advanced", level: "intermediate", topics: ["lead scoring", "sales"] }
-- { title: "AI in Real Estate: Getting Started", url: "https://example.com/ai-real-estate-basics", level: "beginner", topics: ["real estate"], industry: "Real Estate" }
-- { title: "AI Data Audit Checklist", url: "https://example.com/ai-data-audit", level: "beginner", topics: ["data audit", "data quality"] }
-- { title: "Building an AI-Ready Team", url: "https://example.com/ai-team-building", level: "intermediate", topics: ["team", "skills"] }
-
-For each selected resource, include:
 ### [Resource Title]
-_Why this is relevant for you:_ [A brief explanation tailored to the user's scorecard results, e.g., 'You indicated an interest in improving content generation with AI.']
+_Why this is relevant for you:_ [Tailored explanation based on user's scorecard results that directly references their specific situation]
 [Learn More: Resource Title](Resource URL)
 
-Use the user's answers, their AI Readiness Tier, and any specific weak areas or interests identified to select and explain the resources. Do not invent new resources; only select from the provided library. Make this section genuinely helpful and personalized.
-
-Make your assessment thorough, professional, and actionable. The report should provide genuine value and strategic direction.`;
+Use the user's answers, their AI Readiness Tier, and any specific weak areas or interests identified to select and explain the resources. Be specific and provide concrete examples wherever possible. Aim for a helpful, guiding, and expert tone throughout the report. The report should empower the user with clear understanding and actionable next steps. Ensure each section provides substantial value and is not superficial. Make your assessment thorough, professional, and actionable. The report should provide genuine value and strategic direction.`;
 
     // Create the user message with the complete history
     const userMessage = `Analyze the following assessment history for the ${industry} industry and generate the comprehensive Markdown report as instructed: ${JSON.stringify(history)}`;
 
-    // Call Pollinations.AI's OpenAI-compatible endpoint for report generation
-    const response = await fetch('https://text.pollinations.ai/openai', {
+    // Call OpenAI API using the provided API key for report generation
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` // Use George's provided API key
       },
       body: JSON.stringify({
-        model: "openai-large",
-        // No response_format parameter for Markdown output
-        seed: 123, // For consistency
+        model: "gpt-4-turbo", // Using GPT-4 for high-quality report generation
         messages: [
           {
             role: "system",
@@ -121,22 +125,22 @@ Make your assessment thorough, professional, and actionable. The report should p
     // Check if the response is successful
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Pollinations.AI API call failed with status: ${response.status}. Response: ${errorText}`);
-      throw new Error(`Pollinations.AI API call failed with status: ${response.status}`);
+      console.error(`OpenAI API call failed with status: ${response.status}. Response: ${errorText}`);
+      throw new Error(`OpenAI API call failed with status: ${response.status}`);
     }
 
     // Parse the response to extract the Markdown content
     const pollResponse = await response.json();
-    console.log("Raw Pollinations.AI response for report generation:", JSON.stringify(pollResponse, null, 2));
+    console.log("Raw OpenAI response for report generation:", JSON.stringify(pollResponse, null, 2));
     
     const reportMarkdown = pollResponse.choices?.[0]?.message?.content;
 
     if (typeof reportMarkdown !== 'string') {
-      console.error("Error: Expected report Markdown string from AI, but got:", reportMarkdown, "Full Pollinations response:", JSON.stringify(pollResponse, null, 2));
-      return NextResponse.json({ error: "Failed to extract report content from AI response." }, { status: 500 });
+      console.error("Error: Expected report Markdown string from OpenAI, but got:", reportMarkdown, "Full OpenAI response:", JSON.stringify(pollResponse, null, 2));
+      return NextResponse.json({ error: "Failed to extract report content from OpenAI response." }, { status: 500 });
     }
     
-    console.log("Successfully extracted report Markdown from AI. Report length:", reportMarkdown.length);
+    console.log("Successfully extracted report Markdown from OpenAI. Report length:", reportMarkdown.length);
     
     // Return the Markdown report to the frontend
     return NextResponse.json({

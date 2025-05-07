@@ -20,36 +20,36 @@ interface ScorecardState {
 }
 
 // --- TEMPORARY FOR TESTING RESULTS PAGE ---
-const sampleMarkdownReport = `
-## Overall Tier: Enabler
-
-## Key Findings
-**Strengths:**
-- Some data infrastructure exists.
-- Leadership is curious about AI potential.
-**Weaknesses:**
-- Lack of clear, documented AI strategy.
-- Limited internal AI skills/team.
-- Processes are mostly manual.
-
-## Strategic Action Plan
-1.  **Develop & Document Strategy:** Define clear goals, use cases, and roadmap for AI adoption relevant to the Property/Real Estate sector.
-2.  **Identify Pilot Projects:** Select 1-2 low-risk, high-impact pilot projects (e.g., automating specific reports, lead scoring).
-3.  **Invest in Foundational Training:** Provide basic AI literacy training for key stakeholders.
-
-## Getting Started & Resources
-- [Example Resource: AI Strategy Template](#)
-- [Example Resource: Intro to AI for Business](#)
-
-## Illustrative Benchmarks
-* Companies at the 'Enabler' stage in Property/Real Estate often use AI for basic market analysis or automating back-office tasks.
-* 'Leaders' might leverage predictive analytics for property valuation or personalized tenant communication.
-`;
+// const sampleMarkdownReport = `
+// ## Overall Tier: Enabler
+//
+// ## Key Findings
+// **Strengths:**
+// - Some data infrastructure exists.
+// - Leadership is curious about AI potential.
+// **Weaknesses:**
+// - Lack of clear, documented AI strategy.
+// - Limited internal AI skills/team.
+// - Processes are mostly manual.
+//
+// ## Strategic Action Plan
+// 1.  **Develop & Document Strategy:** Define clear goals, use cases, and roadmap for AI adoption relevant to the Property/Real Estate sector.
+// 2.  **Identify Pilot Projects:** Select 1-2 low-risk, high-impact pilot projects (e.g., automating specific reports, lead scoring).
+// 3.  **Invest in Foundational Training:** Provide basic AI literacy training for key stakeholders.
+//
+// ## Getting Started & Resources
+// - [Example Resource: AI Strategy Template](#)
+// - [Example Resource: Intro to AI for Business](#)
+//
+// ## Illustrative Benchmarks
+// * Companies at the 'Enabler' stage in Property/Real Estate often use AI for basic market analysis or automating back-office tasks.
+// * 'Leaders' might leverage predictive analytics for property valuation or personalized tenant communication.
+// `;
 // --- END TEMPORARY DATA ---
 
 export default function Home() {
   // --- TEMPORARY FOR TESTING RESULTS PAGE ---
-  const [currentStep, setCurrentStep] = useState<string>('results'); // Start directly at results
+  const [currentStep, setCurrentStep] = useState<string>('industrySelection'); // Start at industry selection
   // --- END TEMPORARY CHANGES ---
   
   // Define state for selected industry
@@ -64,8 +64,8 @@ export default function Home() {
     history: [],
     isLoading: false,
     error: null,
-    reportMarkdown: sampleMarkdownReport, // Use the sample data
-    overall_status: 'results-generated', // Set status to show results
+    reportMarkdown: null, // No pre-populated report
+    overall_status: 'assessment-in-progress', // Start in progress
     reasoningText: null, // Initialize as null
   };
   
@@ -82,6 +82,9 @@ export default function Home() {
   // Define constants
   const MAX_QUESTIONS = 20; // Match the value in the API route
   const ASSESSMENT_PHASES = ["Strategy", "Data", "Tech", "Team/Process", "Governance"]; // Match API phases
+  
+  // Define auto-complete state
+  const [autoCompleting, setAutoCompleting] = useState(false);
   
   // Start the assessment process
   const startAssessment = async () => {
@@ -152,7 +155,7 @@ export default function Home() {
     
     // Update history locally first and set loading state
     const newHistory = [...scorecardState.history, { question: currentQ, answer: answer }];
-    console.log('Setting isLoading: true before API call');
+    // console.log('Setting isLoading: true before API call'); // COMMENTED OUT
     setScorecardState(prev => ({ ...prev, isLoading: true, error: null, history: newHistory }));
     
     try {
@@ -174,32 +177,32 @@ export default function Home() {
         // Try to extract error details from the response
         const errorBody = await response.text();
         const detailedErrorMessage = `Failed to submit answer. Status: ${response.status}. Body: ${errorBody}`;
-        console.error(detailedErrorMessage);
+        // console.error(detailedErrorMessage); // COMMENTED OUT
         
         // Update state with detailed error and exit the function
-        console.log('Setting isLoading: false due to API error');
+        // console.log('Setting isLoading: false due to API error'); // COMMENTED OUT
         setScorecardState(prev => ({ ...prev, isLoading: false, error: detailedErrorMessage }));
         return;
       }
       
       // Parse the successful response
       const data = await response.json();
-      console.log('Successfully received answer data from API:', data);
+      // console.log('Successfully received answer data from API:', data); // COMMENTED OUT
       
       // Check if assessment is completed
       if (data.overall_status === 'assessment-completed') {
-        console.log('>>> Assessment completed, setting isLoading: false before report generation');
+        // console.log('>>> Assessment completed, setting isLoading: false before report generation'); // COMMENTED OUT
         // Reset loading state before generating the report
         setScorecardState(prev => ({
           ...prev,
           isLoading: false,
           overall_status: data.overall_status
         }));
-        console.log('<<< State update for COMPLETED assessment supposedly complete, now generating report');
+        // console.log('<<< State update for COMPLETED assessment supposedly complete, now generating report'); // COMMENTED OUT
         // Generate the report
         generateReport(newHistory);
       } else {
-        console.log('>>> Updating state with NEXT question data:', data);
+        // console.log('>>> Updating state with NEXT question data:', data); // COMMENTED OUT
         // Update state with the next question
         setScorecardState(prev => ({
           ...prev,
@@ -211,14 +214,14 @@ export default function Home() {
           overall_status: data.overall_status,
           reasoningText: data.reasoningText // Store reasoning text
         }));
-        console.log('<<< State update for NEXT question supposedly complete.');
+        // console.log('<<< State update for NEXT question supposedly complete.'); // COMMENTED OUT
       }
     } catch (error: any) {
       // Log the full error for debugging
-      console.error('Detailed error in handleAnswerSubmit:', error);
+      // console.error('Detailed error in handleAnswerSubmit:', error); // COMMENTED OUT
       
       // Update state with user-friendly error message
-      console.log('Setting isLoading: false due to caught error');
+      // console.log('Setting isLoading: false due to caught error'); // COMMENTED OUT
       setScorecardState(prev => ({
         ...prev,
         isLoading: false,
@@ -285,6 +288,46 @@ export default function Home() {
     }
   };
 
+  // --- AUTO-COMPLETE FUNCTION FOR TESTING ---
+  const handleAutoComplete = async () => {
+    setAutoCompleting(true);
+    try {
+      while (
+        currentStep === 'assessment' &&
+        scorecardState.currentQuestion &&
+        scorecardState.overall_status !== 'assessment-completed'
+      ) {
+        // Wait for any loading to finish
+        while (scorecardState.isLoading) {
+          await new Promise(resolve => setTimeout(resolve, 150));
+        }
+        let autoAnswer;
+        switch (scorecardState.answerType) {
+          case 'single-choice':
+            autoAnswer = scorecardState.options ? scorecardState.options[0] : '';
+            break;
+          case 'multiple-choice':
+            autoAnswer = scorecardState.options ? [scorecardState.options[0]] : [];
+            break;
+          case 'scale':
+            autoAnswer = 3;
+            break;
+          case 'text':
+          default:
+            autoAnswer = 'Automated test answer';
+        }
+        await handleAnswerSubmit(autoAnswer);
+        // Wait for state to update and next question to load
+        await new Promise(resolve => setTimeout(resolve, 700));
+      }
+    } catch (err) {
+      // Optionally log a single error here
+      // console.error('Auto-complete error:', err);
+    } finally {
+      setAutoCompleting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f8faf9] text-gray-900 font-sans">
       <div className="w-full max-w-5xl mx-4 my-8 bg-white rounded-2xl shadow-xl p-0 flex flex-col items-center">
@@ -336,6 +379,27 @@ export default function Home() {
           )}
           {currentStep === 'assessment' && (
             <div className="w-full">
+              {/* Auto-Complete Button for Testing */}
+              <button
+                onClick={handleAutoComplete}
+                disabled={autoCompleting || scorecardState.isLoading}
+                style={{
+                  background: '#f59e42',
+                  color: '#fff',
+                  fontSize: '0.95rem',
+                  borderRadius: '6px',
+                  padding: '0.5rem 1.2rem',
+                  marginBottom: '1rem',
+                  marginLeft: 'auto',
+                  display: 'block',
+                  opacity: autoCompleting || scorecardState.isLoading ? 0.6 : 1,
+                  cursor: autoCompleting || scorecardState.isLoading ? 'not-allowed' : 'pointer',
+                  border: 'none',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.07)'
+                }}
+              >
+                {autoCompleting ? 'Auto-Completing...' : 'Auto-Complete Assessment (Testing Only)'}
+              </button>
               {/* Show ScorecardQuestionDisplay when we have a question */}
               {scorecardState.currentQuestion && (
                 <ScorecardQuestionDisplay
