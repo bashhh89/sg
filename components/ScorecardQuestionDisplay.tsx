@@ -237,20 +237,37 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
   const [isAutoAnswering, setIsAutoAnswering] = useState(false);
   const [autoCompleteCount, setAutoCompleteCount] = useState(0);
   
+  // Add state for tracking potential stalls
+  const [lastAutoCompleteTime, setLastAutoCompleteTime] = useState<number | null>(null);
+  
   // Auto-complete functionality
   useEffect(() => {
     // Don't proceed if auto-complete is not active or if we're already loading
     if (!isAutoCompleting || isLoading) return;
     
+    // Log detailed status information for debugging
+    console.log('Auto-complete status check:', {
+      overallStatus,
+      currentQuestion: currentQuestionNumber,
+      maxQuestions,
+      autoCompleteCount,
+      currentPhase: currentPhaseName
+    });
+    
     // Stop if assessment is complete or max questions reached
     if (overallStatus === 'completed' || 
         overallStatus === 'assessment-completed' || 
         overallStatus === 'results-generated' ||
+        overallStatus === 'report-generated' ||
+        overallStatus.includes('complet') ||
         autoCompleteCount >= 30) {
       console.log('Auto-complete stopping due to completion or max count, status:', overallStatus);
       setIsAutoCompleting(false);
       return;
     }
+    
+    // Update last auto-complete activity time
+    setLastAutoCompleteTime(Date.now());
     
     // If there's a current question, process it
     if (question) {
@@ -489,7 +506,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
         const timer = setTimeout(() => {
           if (!isLoading) {
             console.log('Auto-complete submitting answer:', 
-                       typeof autoAnswer === 'string' ? autoAnswer : JSON.stringify(autoAnswer));
+                      typeof autoAnswer === 'string' ? autoAnswer : JSON.stringify(autoAnswer));
             
             onSubmitAnswer(autoAnswer);
             setAutoCompleteCount(prev => prev + 1);
@@ -497,7 +514,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
           } else {
             console.log('Auto-complete skipping submission due to loading state');
           }
-        }, 2000); // Longer delay to ensure state updates properly
+        }, 3000); // Increased delay to ensure state updates properly
         
         return () => clearTimeout(timer);
       } catch (error: unknown) {
@@ -506,12 +523,56 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
         setAutoCompleteError(`Auto-complete error: ${errorMessage}`);
         setIsAutoCompleting(false);
       }
+    } else {
+      console.log('Auto-complete received empty question, waiting...');
     }
-  }, [isAutoCompleting, question, answerType, options, isLoading, overallStatus, testPersonaTier]);
+  }, [isAutoCompleting, question, answerType, options, isLoading, overallStatus, testPersonaTier, currentQuestionNumber, maxQuestions, currentPhaseName]);
+  
+  // Add stall detection mechanism
+  useEffect(() => {
+    // Only monitor for stalls if auto-complete is active
+    if (!isAutoCompleting || !lastAutoCompleteTime) return;
+    
+    // Check for stalls every 10 seconds
+    const stallChecker = setInterval(() => {
+      const now = Date.now();
+      const timeSinceLastActivity = now - lastAutoCompleteTime;
+      
+      // If no activity for 20 seconds, consider it stalled
+      if (timeSinceLastActivity > 20000) {
+        console.error('Auto-complete appears to be stalled. Last activity was', timeSinceLastActivity/1000, 'seconds ago');
+        console.log('Attempting to recover from stall...');
+        
+        // Try to recover by forcing completion
+        setAutoCompleteError('Auto-complete stalled - trying to recover');
+        
+        // Force a new submission if we have a valid current answer
+        if (isAnswerValid()) {
+          console.log('Forcibly submitting current answer to try to continue');
+          onSubmitAnswer(currentAnswer);
+          setAutoCompleteCount(prev => prev + 1);
+          setLastAutoCompleteTime(now);
+        } else {
+          // If no valid current answer, just stop auto-completing
+          console.log('No valid answer to submit, stopping auto-complete');
+          setIsAutoCompleting(false);
+        }
+      }
+    }, 10000);
+    
+    return () => clearInterval(stallChecker);
+  }, [isAutoCompleting, lastAutoCompleteTime, isAnswerValid, currentAnswer, onSubmitAnswer]);
   
   // Reset counter when auto-complete starts/stops
   useEffect(() => {
-    if (!isAutoCompleting) setAutoCompleteCount(0);
+    if (!isAutoCompleting) {
+      setAutoCompleteCount(0);
+      setLastAutoCompleteTime(null);
+      console.log('Auto-complete process reset');
+    } else {
+      setLastAutoCompleteTime(Date.now());
+      console.log('Auto-complete process started');
+    }
   }, [isAutoCompleting]);
   
   return (
@@ -689,7 +750,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
                   padding: '0.5rem 1.2rem',
                   marginBottom: '1rem',
                   marginLeft: 'auto',
-                  display: 'block',
+                  display: isAutoCompleting ? 'none' : 'block', // Hide when auto-completing
                   opacity: isAutoCompleting || isLoading ? 0.6 : 1,
                   cursor: isAutoCompleting || isLoading ? 'not-allowed' : 'pointer',
                   border: 'none',
@@ -698,6 +759,50 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
               >
                 {isAutoCompleting ? 'Auto-Completing...' : 'Auto-Complete Assessment (Testing Only)'}
               </button>
+              
+              {/* Emergency Stop Button - only shown during auto-complete */}
+              {isAutoCompleting && (
+                <button
+                  onClick={() => {
+                    console.log('Emergency stop triggered by user');
+                    setIsAutoCompleting(false);
+                    setAutoCompleteError('Auto-complete manually stopped by user');
+                  }}
+                  style={{
+                    background: '#e53e3e',
+                    color: '#fff',
+                    fontSize: '0.95rem',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    padding: '0.5rem 1.2rem',
+                    marginBottom: '1rem',
+                    marginLeft: 'auto',
+                    display: 'block',
+                    border: 'none',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ marginRight: '6px' }}>⚠️</span> Stop Auto-Complete
+                </button>
+              )}
+              
+              {/* Auto-Complete Status - show count during auto-complete */}
+              {isAutoCompleting && (
+                <div style={{
+                  padding: '8px 12px',
+                  background: '#f7fafc',
+                  borderRadius: '6px',
+                  marginBottom: '1rem',
+                  fontSize: '0.85rem',
+                  color: '#4a5568',
+                  border: '1px dashed #cbd5e0',
+                  textAlign: 'center'
+                }}>
+                  Auto-completing: {autoCompleteCount} questions processed
+                </div>
+              )}
+              
               <button
                 data-testid="scorecard-submit-btn"
                 onClick={() => onSubmitAnswer(currentAnswer)}
