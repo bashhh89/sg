@@ -36,6 +36,9 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
   handleStartAutoComplete,
   overallStatus
 }) => {
+  // Add state for test persona tier
+  const [testPersonaTier, setTestPersonaTier] = useState<'Dabbler' | 'Enabler' | 'Leader'>('Enabler');
+  
   // Add a function to map between API answerType and component answerType
   const normalizeAnswerType = (apiAnswerType: string): string => {
     console.log('Normalizing API answer type:', apiAnswerType);
@@ -256,37 +259,226 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
         answerType: answerType,
         options: options ? options.slice(0, 2).join(', ') + (options.length > 2 ? '...' : '') : 'none',
         phase: currentPhaseName,
-        status: overallStatus
+        status: overallStatus,
+        testPersonaTier: testPersonaTier // Log the current persona tier
       });
       
       // Define a variable to hold the answer with appropriate type
       let autoAnswer: string | string[] = '';
       
       try {
-        // Use a basic and direct approach based on answer type
+        // Use a persona-driven approach based on answer type
         const type = (answerType || '').toLowerCase();
         
+        // Define persona-specific text answers
+        const dabblerTextAnswers = [
+          "We're really just at the beginning stages of exploring AI for this.",
+          "No formal process in place for this yet, still learning.",
+          "Budget is a significant constraint for advanced solutions here.",
+          "Mainly using free or basic AI tools for simple tasks.",
+          "Lack of internal expertise is a challenge we're facing."
+        ];
+        
+        const enablerTextAnswers = [
+          "We have a few AI initiatives underway and are seeing some positive results.",
+          "Looking to optimize our current AI tools and scale their usage.",
+          "Our team has moderate AI skills, and we're investing in further training.",
+          "Data integration is a current focus to improve our AI model inputs.",
+          "We're aiming to achieve better efficiency and ROI with our AI projects."
+        ];
+        
+        const leaderTextAnswers = [
+          "Our AI strategy is mature and well-integrated with business goals.",
+          "We leverage advanced AI platforms and custom models for a competitive edge.",
+          "Governance, ethics, and ROI measurement are key components of our AI framework.",
+          "Continuously exploring cutting-edge AI to maintain market leadership.",
+          "Our dedicated AI team drives innovation across multiple departments."
+        ];
+        
         if (type === 'radio') {
-          // Radio buttons - choose first option
-          autoAnswer = options && options.length > 0 ? options[0] : '';
+          // Radio buttons - choose option based on persona tier
+          if (options && options.length > 0) {
+            if (testPersonaTier === 'Dabbler') {
+              // Dabbler typically selects basic/beginning options
+              // Look for keywords that might indicate basic options
+              const basicOptionIndex = options.findIndex(option => 
+                option.toLowerCase().includes('basic') || 
+                option.toLowerCase().includes('beginner') || 
+                option.toLowerCase().includes('starting') ||
+                option.toLowerCase().includes('limited') ||
+                option.toLowerCase().includes('no ') ||
+                option.toLowerCase().includes('not '));
+              
+              if (basicOptionIndex !== -1) {
+                autoAnswer = options[basicOptionIndex];
+              } else {
+                // If no keyword found, select from first half of options
+                const index = Math.floor(Math.random() * Math.ceil(options.length / 2));
+                autoAnswer = options[index];
+              }
+            } else if (testPersonaTier === 'Enabler') {
+              // Enabler typically selects middle-ground options
+              // Look for keywords that indicate moderate progress
+              const moderateOptionIndex = options.findIndex(option => 
+                option.toLowerCase().includes('moderate') || 
+                option.toLowerCase().includes('partial') || 
+                option.toLowerCase().includes('some') ||
+                option.toLowerCase().includes('developing') ||
+                option.toLowerCase().includes('planned'));
+              
+              if (moderateOptionIndex !== -1) {
+                autoAnswer = options[moderateOptionIndex];
+              } else {
+                // If no keyword found, select from middle of options
+                const middleIndex = Math.floor(options.length / 2);
+                const rangeStart = Math.max(0, middleIndex - 1);
+                const rangeEnd = Math.min(options.length - 1, middleIndex + 1);
+                const index = rangeStart + Math.floor(Math.random() * (rangeEnd - rangeStart + 1));
+                autoAnswer = options[index];
+              }
+            } else { // Leader
+              // Leader typically selects advanced/mature options
+              // Look for keywords that indicate advanced progress
+              const advancedOptionIndex = options.findIndex(option => 
+                option.toLowerCase().includes('advanced') || 
+                option.toLowerCase().includes('mature') || 
+                option.toLowerCase().includes('complete') ||
+                option.toLowerCase().includes('full') ||
+                option.toLowerCase().includes('extensive'));
+              
+              if (advancedOptionIndex !== -1) {
+                autoAnswer = options[advancedOptionIndex];
+              } else {
+                // If no keyword found, select from second half of options
+                const startIndex = Math.floor(options.length / 2);
+                const index = startIndex + Math.floor(Math.random() * (options.length - startIndex));
+                autoAnswer = options[index];
+              }
+            }
+          } else {
+            autoAnswer = '';
+          }
           console.log('Selected radio option:', autoAnswer);
         }
         else if (type === 'checkbox') {
-          // Checkbox - select first two options if available
-          autoAnswer = options && options.length > 0 
-            ? (options.length > 1 ? [options[0], options[1]] : [options[0]])
-            : [];
+          // Checkbox - select options based on persona tier
+          if (options && options.length > 0) {
+            if (testPersonaTier === 'Dabbler') {
+              // Dabbler selects fewer options (1-2)
+              const numOptions = Math.min(options.length, 1 + Math.floor(Math.random() * 2));
+              autoAnswer = [];
+              
+              // Try to find basic options first
+              const basicOptions = options.filter(option => 
+                option.toLowerCase().includes('basic') || 
+                option.toLowerCase().includes('beginner') || 
+                option.toLowerCase().includes('simple'));
+              
+              if (basicOptions.length > 0) {
+                for (let i = 0; i < Math.min(numOptions, basicOptions.length); i++) {
+                  (autoAnswer as string[]).push(basicOptions[i]);
+                }
+              }
+              
+              // If we need more options, randomly select from the first half
+              while ((autoAnswer as string[]).length < numOptions) {
+                const halfLength = Math.ceil(options.length / 2);
+                const randomIndex = Math.floor(Math.random() * halfLength);
+                const randomOption = options[randomIndex];
+                
+                if (!(autoAnswer as string[]).includes(randomOption)) {
+                  (autoAnswer as string[]).push(randomOption);
+                }
+              }
+            } else if (testPersonaTier === 'Enabler') {
+              // Enabler selects a moderate number of options (2-3)
+              const numOptions = Math.min(options.length, 2 + Math.floor(Math.random() * 2));
+              autoAnswer = [];
+              
+              // Randomly select options, with preference for middle-range options
+              while ((autoAnswer as string[]).length < numOptions) {
+                let index;
+                // Bias toward the middle third of options
+                if (Math.random() < 0.6) {
+                  const thirdLength = Math.floor(options.length / 3);
+                  index = thirdLength + Math.floor(Math.random() * thirdLength);
+                } else {
+                  index = Math.floor(Math.random() * options.length);
+                }
+                
+                const option = options[index];
+                if (!(autoAnswer as string[]).includes(option)) {
+                  (autoAnswer as string[]).push(option);
+                }
+              }
+            } else { // Leader
+              // Leader selects more options (3-4 or more)
+              const numOptions = Math.min(options.length, 3 + Math.floor(Math.random() * 2));
+              autoAnswer = [];
+              
+              // Try to find advanced options first
+              const advancedOptions = options.filter(option => 
+                option.toLowerCase().includes('advanced') || 
+                option.toLowerCase().includes('complete') || 
+                option.toLowerCase().includes('comprehensive'));
+              
+              if (advancedOptions.length > 0) {
+                for (let i = 0; i < Math.min(numOptions, advancedOptions.length); i++) {
+                  (autoAnswer as string[]).push(advancedOptions[i]);
+                }
+              }
+              
+              // If we need more options, prefer options from the second half
+              while ((autoAnswer as string[]).length < numOptions) {
+                const halfLength = Math.floor(options.length / 2);
+                const randomIndex = halfLength + Math.floor(Math.random() * (options.length - halfLength));
+                const randomOption = options[randomIndex];
+                
+                if (!(autoAnswer as string[]).includes(randomOption)) {
+                  (autoAnswer as string[]).push(randomOption);
+                }
+              }
+            }
+          } else {
+            autoAnswer = [];
+          }
           console.log('Selected checkbox options:', autoAnswer);
         }
         else if (type === 'scale') {
-          // Scale - select middle option
-          autoAnswer = options && options.length > 0 ? options[Math.floor(options.length / 2)] : '';
+          // Scale - select based on persona tier
+          if (options && options.length > 0) {
+            let index = 0;
+            if (testPersonaTier === 'Dabbler') {
+              // Dabbler: lower range (1-2 on a 1-5 scale)
+              index = Math.floor(Math.random() * Math.ceil(options.length * 0.4));
+            } else if (testPersonaTier === 'Enabler') {
+              // Enabler: middle range (2-4 on a 1-5 scale)
+              const lowIndex = Math.floor(options.length * 0.2);
+              const highIndex = Math.floor(options.length * 0.8);
+              index = lowIndex + Math.floor(Math.random() * (highIndex - lowIndex));
+            } else { // Leader
+              // Leader: higher range (4-5 on a 1-5 scale)
+              index = Math.floor(options.length * 0.6) + Math.floor(Math.random() * Math.ceil(options.length * 0.4));
+            }
+            
+            // Ensure index is within bounds
+            index = Math.min(Math.max(0, index), options.length - 1);
+            autoAnswer = options[index];
+          } else {
+            autoAnswer = '';
+          }
           console.log('Selected scale option:', autoAnswer);
         }
         else {
-          // Text or any other type - provide generic answer
-          autoAnswer = 'This is an automated response for the AI efficiency assessment test.';
-          console.log('Generated text answer for type:', type);
+          // Text or any other type - provide persona-specific answer
+          if (testPersonaTier === 'Dabbler') {
+            autoAnswer = dabblerTextAnswers[Math.floor(Math.random() * dabblerTextAnswers.length)];
+          } else if (testPersonaTier === 'Enabler') {
+            autoAnswer = enablerTextAnswers[Math.floor(Math.random() * enablerTextAnswers.length)];
+          } else { // Leader
+            autoAnswer = leaderTextAnswers[Math.floor(Math.random() * leaderTextAnswers.length)];
+          }
+          console.log('Generated text answer for type:', type, 'Persona:', testPersonaTier);
         }
         
         // Set the answer and prepare for submission
@@ -315,7 +507,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
         setIsAutoCompleting(false);
       }
     }
-  }, [isAutoCompleting, question, answerType, options, isLoading, overallStatus]);
+  }, [isAutoCompleting, question, answerType, options, isLoading, overallStatus, testPersonaTier]);
   
   // Reset counter when auto-complete starts/stops
   useEffect(() => {
@@ -459,6 +651,32 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
               <div style={{ marginBottom: '24px' }}>
                 {renderAnswerInput()}
               </div>
+              
+              {/* Test Persona Tier Selector */}
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                <label style={{ marginRight: '10px', fontSize: '0.95rem', color: '#666' }}>
+                  Select Test Persona Tier:
+                </label>
+                <select
+                  value={testPersonaTier}
+                  onChange={(e) => setTestPersonaTier(e.target.value as 'Dabbler' | 'Enabler' | 'Leader')}
+                  disabled={isAutoCompleting || isLoading}
+                  style={{
+                    padding: '0.5rem',
+                    borderRadius: '6px',
+                    border: '1px solid #ddd',
+                    backgroundColor: '#fff',
+                    color: '#333',
+                    cursor: isAutoCompleting || isLoading ? 'not-allowed' : 'pointer',
+                    opacity: isAutoCompleting || isLoading ? 0.6 : 1
+                  }}
+                >
+                  <option value="Dabbler">Dabbler</option>
+                  <option value="Enabler">Enabler</option>
+                  <option value="Leader">Leader</option>
+                </select>
+              </div>
+              
               {/* Auto-Complete Button for Testing */}
               <button
                 onClick={handleStartAutoComplete}
