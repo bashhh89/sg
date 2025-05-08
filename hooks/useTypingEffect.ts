@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
  * @returns The text that has been typed out so far
  */
 export function useTypingEffect(text: string | undefined | null, speed: number = 30) {
+  // --- Restore Original Logic ---
   const [displayedText, setDisplayedText] = useState('');
   const [isComplete, setIsComplete] = useState(false);
 
@@ -48,6 +49,7 @@ export function useTypingEffect(text: string | undefined | null, speed: number =
       }
     };
   }, [text, speed]);
+  // --- End Original Logic ---
 
   return { displayedText, isComplete };
 } 

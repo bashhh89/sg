@@ -13,6 +13,22 @@ const MAX_QUESTIONS = 20; // Approximately 4 questions per phase
 // Pollinations API base URL
 const POLLINATIONS_API_URL = "https://text.pollinations.ai/openai";
 
+// Add a helper for fetch with retry
+async function fetchWithRetry(url: string, options: RequestInit, retries = 3, delayMs = 2000) {
+  let lastError;
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+      lastError = new Error(`Pollinations API responded with status ${res.status}: ${await res.text()}`);
+    } catch (e) {
+      lastError = e;
+    }
+    if (i < retries - 1) await new Promise(res => setTimeout(res, delayMs));
+  }
+  throw lastError || new Error('fetch failed');
+}
+
 export async function POST(request: Request) {
   try {
     // Parse and validate the request body
@@ -122,7 +138,7 @@ Based on your scorecard results, select 2-3 of the most relevant resources and p
       temperature: 0.7,
     };
 
-    const response = await fetch(POLLINATIONS_API_URL, {
+    const response = await fetchWithRetry(POLLINATIONS_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -232,7 +248,7 @@ Your response MUST be a valid JSON object matching the specified structure.`;
     };
 
     // Call Pollinations AI API
-    const response = await fetch(POLLINATIONS_API_URL, {
+    const response = await fetchWithRetry(POLLINATIONS_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -268,6 +284,37 @@ Your response MUST be a valid JSON object matching the specified structure.`;
     // Ensure options array exists for choice-based questions
     if (['radio', 'checkbox'].includes(parsedResponse.answerType) && !Array.isArray(parsedResponse.options)) {
       throw new Error('Options array required for radio/checkbox questions');
+    }
+
+    // --- FORCE overall_status to 'asking' until MAX_QUESTIONS is reached ---
+    if (history.length + 1 < MAX_QUESTIONS) {
+      parsedResponse.overall_status = 'asking';
+    } else {
+      parsedResponse.overall_status = 'completed';
+    }
+
+    // PATCH: If questionText is blank/empty and we haven't hit MAX_QUESTIONS, advance phase and re-ask
+    if (
+      (!parsedResponse.questionText || parsedResponse.questionText.trim() === '') &&
+      history.length < MAX_QUESTIONS
+    ) {
+      const currentPhaseIndex = ASSESSMENT_PHASES.indexOf(currentPhaseName);
+      if (currentPhaseIndex < ASSESSMENT_PHASES.length - 1) {
+        // Advance to next phase and recursively call for a new question
+        const nextPhase = ASSESSMENT_PHASES[currentPhaseIndex + 1];
+        console.log('>>> BACKEND: Blank question detected, advancing to next phase:', nextPhase);
+        return await handleAssessmentRequest(nextPhase, history, industry);
+      } else {
+        // If no more phases, finish assessment
+        return NextResponse.json({
+          questionText: null,
+          answerType: null,
+          options: null,
+          phase_status: 'complete',
+          overall_status: 'completed',
+          currentPhaseName
+        });
+      }
     }
 
     // Handle phase transitions

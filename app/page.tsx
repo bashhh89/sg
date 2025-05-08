@@ -1,22 +1,36 @@
 'use client';
 
 import Image from "next/image";
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import ScorecardQuestionDisplay from '@/components/ScorecardQuestionDisplay';
 import ScorecardResultsDisplay from '@/components/ScorecardResultsDisplay';
 
 // Define the ScorecardState interface
+type AnswerSourceType = 'Groq Llama 3 8B' | 'Pollinations Fallback' | 'Groq API Failed' | 'Fallback Failed' | 'Manual';
+interface ScorecardHistoryEntry {
+  question: string;
+  answer: any;
+  phaseName?: string;
+  answerType?: string;
+  options?: string[] | null;
+  reasoningText?: string | null;
+  answerSource?: AnswerSourceType;
+}
 interface ScorecardState {
   currentPhaseName: string;
   currentQuestion: string | null;
   answerType: string | null;
   options: string[] | null;
-  history: Array<{ question: string; answer: any }>;
+  history: ScorecardHistoryEntry[];
   isLoading: boolean;
   error: string | null;
   overall_status: string; // 'assessment-in-progress' | 'assessment-completed' | 'results-generated' etc.
   reportMarkdown: string | null;
   reasoningText: string | null; // Added for AI thinking display
+  industry: string;
+  currentQuestionNumber: number;
+  maxQuestions: number;
+  assessmentPhases: string[];
 }
 
 // --- TEMPORARY FOR TESTING RESULTS PAGE ---
@@ -67,6 +81,10 @@ export default function Home() {
     reportMarkdown: null, // No pre-populated report
     overall_status: 'assessment-in-progress', // Start in progress
     reasoningText: null, // Initialize as null
+    industry: "Property/Real Estate",
+    currentQuestionNumber: 1,
+    maxQuestions: 20,
+    assessmentPhases: ["Strategy", "Data", "Tech", "Team/Process", "Governance"],
   };
   
   // Define state for scorecard
@@ -88,11 +106,250 @@ export default function Home() {
   // Add autoCompleteError state
   const [autoCompleteError, setAutoCompleteError] = useState<string | null>(null);
   
-  // Start the assessment process
+  // Memoize reasoningText to prevent unnecessary re-renders of ScorecardQuestionDisplay
+  const memoizedReasoningText = useMemo(() => scorecardState.reasoningText, [scorecardState.reasoningText]);
+  
+  // Memoize options array
+  const memoizedOptions = useMemo(
+    () => scorecardState.options ? [...scorecardState.options] : [],
+    [scorecardState.options]
+  );
+
+  // Memoize history array
+  const memoizedHistory = useMemo(
+    () => scorecardState.history ? [...scorecardState.history] : [],
+    [scorecardState.history]
+  );
+
+  // Memoize question object (if you want to pass as a single object)
+  const memoizedQuestion = useMemo(
+    () => scorecardState.currentQuestion
+      ? {
+          questionText: scorecardState.currentQuestion,
+          answerType: scorecardState.answerType,
+          options: scorecardState.options,
+        }
+      : null,
+    [scorecardState.currentQuestion, scorecardState.answerType, scorecardState.options]
+  );
+
+  // Memoize setIsAutoCompleting
+  const memoizedSetIsAutoCompleting = useCallback(setIsAutoCompleting, []);
+  // Memoize setAutoCompleteError
+  const memoizedSetAutoCompleteError = useCallback(setAutoCompleteError, []);
+
+  // Add new state for final report generation loading indicator
+  const [isGeneratingFinalReport, setIsGeneratingFinalReport] = useState(false);
+
+  // --- Stabilize generateReport (Dependency: selectedIndustry) ---
+  const generateReport = useCallback(async (finalHistory: Array<{ question: string; answer: any }>) => {
+    setScorecardState(prev => ({ ...prev, isLoading: true, error: null }));
+    setIsGeneratingFinalReport(true); // Show final report loading indicator
+    
+    try {
+      const response = await fetch('/api/scorecard-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generateReport',
+          history: finalHistory,
+          industry: selectedIndustry
+        }),
+      });
+      if (!response.ok) {
+        const errorBody = await response.text();
+        const detailedErrorMessage = `Failed to generate report. Status: ${response.status}. Body: ${errorBody}`;
+        console.error(detailedErrorMessage);
+        setScorecardState(prev => ({ ...prev, isLoading: false, error: detailedErrorMessage }));
+        setIsGeneratingFinalReport(false); // Hide loading indicator on error
+        return;
+      }
+      const data = await response.json();
+      console.log('Successfully received report data from API:', data);
+      
+      // Store report data in localStorage or sessionStorage to share between pages
+      if (data.reportMarkdown) {
+        sessionStorage.setItem('reportMarkdown', data.reportMarkdown);
+        sessionStorage.setItem('questionAnswerHistory', JSON.stringify(finalHistory));
+        
+        // Redirect to the new dashboard design page
+        window.location.href = '/scorecard/results';
+      } else {
+        console.error('Report data received but reportMarkdown is missing');
+        setScorecardState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'Report generation completed but data was invalid'
+        }));
+        setIsGeneratingFinalReport(false);
+      }
+    } catch (error: any) {
+      console.error('Detailed error in generateReport:', error);
+      setScorecardState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: `An unexpected error occurred in generateReport: ${error.message || 'Unknown error'}`
+      }));
+      setIsGeneratingFinalReport(false); // Hide loading indicator on error
+    }
+  }, [selectedIndustry]); // Only depends on selectedIndustry
+
+  // --- Stabilize handleAnswerSubmit using Functional Updates ---
+  const handleAnswerSubmit = useCallback(async (answer: any, answerSource?: AnswerSourceType) => {
+    let submittedQuestion = '';
+    let currentPhase = '';
+    let currentAnswerType: string | null = null;
+    let currentOptions: string[] | null = null;
+    let currentReasoning: string | null = null;
+
+    setScorecardState(prev => {
+      if (!prev.currentQuestion) {
+        console.error('Submit attempted with no current question (inside functional update)');
+        return prev;
+      }
+      submittedQuestion = prev.currentQuestion;
+      currentPhase = prev.currentPhaseName;
+      currentAnswerType = prev.answerType ?? '';
+      currentOptions = prev.options;
+      currentReasoning = prev.reasoningText;
+
+      const newHistory = [...prev.history, {
+        question: submittedQuestion,
+        answer: answer,
+        phaseName: currentPhase,
+        answerType: currentAnswerType,
+        options: currentOptions,
+        reasoningText: currentReasoning,
+        answerSource: answerSource || 'Manual',
+      }];
+      return { ...prev, isLoading: true, error: null, history: newHistory };
+    });
+
+    try {
+      const updatedHistory = (await new Promise<ScorecardState>(resolve => setScorecardState(prev => { resolve(prev); return prev; }))).history;
+
+      // If we've reached MAX_QUESTIONS, force completion and generate report
+      if (updatedHistory.length >= MAX_QUESTIONS) {
+        setScorecardState(prev => ({
+          ...prev,
+          isLoading: false,
+          overall_status: 'completed'
+        }));
+        generateReport(updatedHistory);
+        return;
+      }
+
+      const response = await fetch('/api/scorecard-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPhaseName: currentPhase,
+          history: updatedHistory,
+          industry: selectedIndustry
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        const detailedErrorMessage = `Failed to submit answer. Status: ${response.status}. Body: ${errorBody}`;
+        console.error(detailedErrorMessage);
+        setScorecardState(prev => ({ ...prev, isLoading: false, error: detailedErrorMessage }));
+        return;
+      }
+      const data = await response.json();
+      if (data.overall_status) {
+        console.log('API response overall_status:', data.overall_status);
+      }
+
+      // Only generate report if API says completed AND we've hit MAX_QUESTIONS
+      if (
+        (data.overall_status === 'assessment-completed' ||
+         data.overall_status === 'completed' ||
+         data.overall_status.includes('complet')) &&
+        updatedHistory.length >= MAX_QUESTIONS
+      ) {
+        if (isAutoCompleting) {
+          console.log('[Parent] Assessment completed detected, disabling auto-complete.');
+          setIsAutoCompleting(false);
+        }
+        setScorecardState(prev => ({
+          ...prev,
+          isLoading: false,
+          overall_status: data.overall_status
+        }));
+        generateReport(updatedHistory);
+      } else if (data.overall_status === 'completed' && updatedHistory.length < MAX_QUESTIONS) {
+        // If backend says completed but we haven't hit max, keep going
+        // Just fetch the next question as normal
+        setScorecardState(prev => ({
+          ...prev,
+          isLoading: false,
+          currentQuestion: data.questionText,
+          answerType: data.answerType,
+          options: data.options,
+          currentPhaseName: data.currentPhaseName,
+          overall_status: data.overall_status,
+          reasoningText: data.reasoning_text,
+          currentQuestionNumber: updatedHistory.length + 1
+        }));
+      } else {
+        setScorecardState(prev => ({
+          ...prev,
+          isLoading: false,
+          currentQuestion: data.questionText,
+          answerType: data.answerType,
+          options: data.options,
+          currentPhaseName: data.currentPhaseName,
+          overall_status: data.overall_status,
+          reasoningText: data.reasoning_text,
+          currentQuestionNumber: updatedHistory.length + 1
+        }));
+      }
+    } catch (error: any) {
+      console.error('Error in handleAnswerSubmit:', error);
+      setScorecardState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: `An unexpected error occurred: ${error.message || 'Unknown error'}`
+      }));
+      if (isAutoCompleting) {
+        console.log('Stopping auto-complete due to error');
+        setIsAutoCompleting(false);
+        setAutoCompleteError(`Auto-complete failed: ${error.message || 'Unknown error'}`);
+      }
+    }
+  }, [selectedIndustry, isAutoCompleting, generateReport, setIsAutoCompleting, setAutoCompleteError]);
+
+  // --- Stabilize handleStartAutoComplete (Dependency: scorecardState values it READS) ---
+  const handleStartAutoComplete = useCallback(() => {
+    setAutoCompleteError(null);
+    const { isLoading, overall_status, currentQuestion } = scorecardState; // Destructure needed values
+    if (isLoading) {
+      setAutoCompleteError("Cannot start auto-complete while loading");
+      return;
+    }
+    if (overall_status === 'completed' || 
+        overall_status === 'results-generated' ||
+        overall_status === 'report-generated') {
+      setAutoCompleteError("Assessment is already complete");
+      return;
+    }
+    if (!currentQuestion) {
+      setAutoCompleteError("No current question to answer");
+      return;
+    }
+    console.log("Starting auto-complete process");
+    setIsAutoCompleting(true);
+  }, [scorecardState.isLoading, scorecardState.overall_status, scorecardState.currentQuestion, setIsAutoCompleting, setAutoCompleteError]); // Depend on specific state fields read
+  
+  // --- startAssessment doesn't need useCallback as it's usually called once ---
   const startAssessment = async () => {
+    // Reset state to initial before starting
+    setScorecardState({ ...initialScorecardState, industry: selectedIndustry });
+    setIsAutoCompleting(false);
+    setAutoCompleteError(null);
     // Set loading state
     setScorecardState(prev => ({ ...prev, isLoading: true, error: null }));
-    
     try {
       // Make the initial POST request to the API
       const response = await fetch('/api/scorecard-ai', {
@@ -106,25 +363,13 @@ export default function Home() {
           industry: selectedIndustry
         }),
       });
-      
-      // Check if the response is not OK
       if (!response.ok) {
-        // Try to extract error details from the response
         const errorBody = await response.text();
         const detailedErrorMessage = `Failed to start assessment. Status: ${response.status}. Body: ${errorBody}`;
-        console.error(detailedErrorMessage);
-        
-        // Update state with detailed error and exit the function
         setScorecardState(prev => ({ ...prev, isLoading: false, error: detailedErrorMessage }));
         return;
       }
-      
-      // Parse the successful response
       const data = await response.json();
-      console.log('Successfully received data from API:', data);
-      console.log('Reasoning text from API:', data.reasoning_text ? 'Present' : 'Missing');
-      
-      // Update state with the first question
       setScorecardState(prev => ({
         ...prev,
         isLoading: false,
@@ -133,16 +378,11 @@ export default function Home() {
         options: data.options,
         currentPhaseName: data.currentPhaseName,
         overall_status: data.overall_status,
-        reasoningText: data.reasoning_text // Use reasoning_text from API response
+        reasoningText: data.reasoning_text,
+        currentQuestionNumber: 1
       }));
-      
-      // Change view to assessment
       setCurrentStep('assessment');
     } catch (error: any) {
-      // Log the full error for debugging
-      console.error('Detailed error in startAssessment:', error);
-      
-      // Update state with user-friendly error message
       setScorecardState(prev => ({
         ...prev,
         isLoading: false,
@@ -151,213 +391,10 @@ export default function Home() {
     }
   };
   
-  // Handle submitting an answer
-  const handleAnswerSubmit = async (answer: any) => {
-    const currentQ = scorecardState.currentQuestion;
-    if (!currentQ) {
-      console.error('Submit attempted with no current question');
-      return; // Should not happen if button is only shown when there's a question
-    }
-    
-    console.log('Submitting answer:', 
-               typeof answer === 'string' ? answer : 
-               Array.isArray(answer) ? JSON.stringify(answer) : 'Unknown type',
-               'for question:', currentQ.substring(0, 30));
-    
-    // Update history locally first and set loading state
-    const newHistory = [...scorecardState.history, { question: currentQ, answer: answer }];
-    console.log('Setting loading state, history length:', newHistory.length);
-    setScorecardState(prev => ({ ...prev, isLoading: true, error: null, history: newHistory }));
-    
-    try {
-      // Make POST request to API
-      console.log('Sending POST request to API with:', {
-        currentPhaseName: scorecardState.currentPhaseName,
-        historyLength: newHistory.length,
-        industry: selectedIndustry
-      });
-      
-      const response = await fetch('/api/scorecard-ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentPhaseName: scorecardState.currentPhaseName,
-          history: newHistory,
-          industry: selectedIndustry
-        }),
-      });
-      
-      // Check if the response is not OK
-      if (!response.ok) {
-        // Try to extract error details from the response
-        const errorBody = await response.text();
-        const detailedErrorMessage = `Failed to submit answer. Status: ${response.status}. Body: ${errorBody}`;
-        console.error(detailedErrorMessage);
-        
-        // Update state with detailed error and exit the function
-        setScorecardState(prev => ({ ...prev, isLoading: false, error: detailedErrorMessage }));
-        return;
-      }
-      
-      // Parse the successful response
-      const data = await response.json();
-      // Log the raw data for debugging
-      console.log('Raw API response data:', data);
-      
-      // Extract and log reasoning text specifically
-      if (data.reasoning_text) {
-        console.log('Reasoning text received (first 100 chars):', data.reasoning_text.substring(0, 100) + '...');
-      } else {
-        console.warn('No reasoning_text in API response');
-      }
-      
-      console.log('Received API response:', {
-        nextQuestion: data.questionText ? data.questionText.substring(0, 30) + '...' : null,
-        answerType: data.answerType,
-        phase: data.currentPhaseName,
-        status: data.overall_status,
-        hasReasoning: !!data.reasoning_text,
-        reasoningPreview: data.reasoning_text ? data.reasoning_text.substring(0, 30) + '...' : 'None'
-      });
-      
-      // Check if assessment is completed
-      if (data.overall_status === 'assessment-completed' || data.overall_status === 'completed') {
-        console.log('Assessment completed, generating report');
-        // Reset loading state before generating the report
-        setScorecardState(prev => ({
-          ...prev,
-          isLoading: false,
-          overall_status: data.overall_status
-        }));
-        // Generate the report
-        generateReport(newHistory);
-      } else {
-        console.log('Moving to next question');
-        // Update state with the next question
-        setScorecardState(prev => ({
-          ...prev,
-          isLoading: false, // Explicitly ensure loading is set to false
-          currentQuestion: data.questionText,
-          answerType: data.answerType,
-          options: data.options,
-          currentPhaseName: data.currentPhaseName,
-          overall_status: data.overall_status,
-          reasoningText: data.reasoning_text // Make sure we're using the correct property name from API
-        }));
-        
-        // Log the state update for debugging
-        console.log('State updated with:', {
-          question: data.questionText ? data.questionText.substring(0, 30) + '...' : null,
-          answerType: data.answerType,
-          reasoningText: data.reasoning_text ? 'Present' : 'Missing'
-        });
-      }
-    } catch (error: any) {
-      // Log the full error for debugging
-      console.error('Error in handleAnswerSubmit:', error);
-      
-      // Update state with user-friendly error message
-      setScorecardState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: `An unexpected error occurred: ${error.message || 'Unknown error'}`
-      }));
-      
-      // If auto-completing, stop on error
-      if (isAutoCompleting) {
-        console.log('Stopping auto-complete due to error');
-        setIsAutoCompleting(false);
-        setAutoCompleteError(`Auto-complete failed: ${error.message || 'Unknown error'}`);
-      }
-    }
-  };
-  
-  // Generate the final report
-  const generateReport = async (finalHistory: Array<{ question: string; answer: any }>) => {
-    // Set loading state
-    setScorecardState(prev => ({ ...prev, isLoading: true, error: null }));
-    
-    try {
-      // Make POST request to API
-      const response = await fetch('/api/scorecard-ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'generateReport',
-          history: finalHistory,
-          industry: selectedIndustry
-        }),
-      });
-      
-      // Check if the response is not OK
-      if (!response.ok) {
-        // Try to extract error details from the response
-        const errorBody = await response.text();
-        const detailedErrorMessage = `Failed to generate report. Status: ${response.status}. Body: ${errorBody}`;
-        console.error(detailedErrorMessage);
-        
-        // Update state with detailed error and exit the function
-        setScorecardState(prev => ({ ...prev, isLoading: false, error: detailedErrorMessage }));
-        return;
-      }
-      
-      // Parse the successful response
-      const data = await response.json();
-      console.log('Successfully received report data from API:', data);
-      
-      // Update state with the report
-      setScorecardState(prev => ({
-        ...prev,
-        isLoading: false,
-        reportMarkdown: data.reportMarkdown,
-        overall_status: 'results-generated'
-      }));
-      
-      // Change view to results
-      setCurrentStep('results');
-    } catch (error: any) {
-      // Log the full error for debugging
-      console.error('Detailed error in generateReport:', error);
-      
-      // Update state with user-friendly error message
-      setScorecardState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: `An unexpected error occurred in generateReport: ${error.message || 'Unknown error'}`
-      }));
-    }
-  };
-
   // In the results step, stop auto-completing if needed
   if (currentStep === 'results' && isAutoCompleting) {
     setIsAutoCompleting(false);
   }
-
-  // Reset autoCompleteError when starting assessment or auto-complete
-  const handleStartAutoComplete = () => {
-    // Clear any previous error
-    setAutoCompleteError(null);
-    
-    // Check if we can start auto-complete
-    if (scorecardState.isLoading) {
-      setAutoCompleteError("Cannot start auto-complete while loading");
-      return;
-    }
-    
-    if (scorecardState.overall_status === 'completed' || 
-        scorecardState.overall_status === 'results-generated') {
-      setAutoCompleteError("Assessment is already complete");
-      return;
-    }
-    
-    console.log("Starting auto-complete process");
-    // Start the auto-complete process
-    setIsAutoCompleting(true);
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f8faf9] text-gray-900 font-sans">
@@ -419,21 +456,23 @@ export default function Home() {
               {/* Show ScorecardQuestionDisplay when we have a question */}
               {scorecardState.currentQuestion && (
                 <ScorecardQuestionDisplay
-                  question={scorecardState.currentQuestion}
-                  answerType={scorecardState.answerType!}
-                  options={scorecardState.options}
+                  question={typeof scorecardState.currentQuestion === 'string' ? scorecardState.currentQuestion : ''}
+                  answerType={typeof scorecardState.answerType === 'string' ? scorecardState.answerType : ''}
+                  options={Array.isArray(scorecardState.options) ? scorecardState.options : null}
                   onSubmitAnswer={handleAnswerSubmit}
                   isLoading={scorecardState.isLoading}
                   currentPhaseName={scorecardState.currentPhaseName}
-                  currentQuestionNumber={scorecardState.history.length + 1}
-                  maxQuestions={MAX_QUESTIONS}
-                  assessmentPhases={ASSESSMENT_PHASES}
-                  reasoningText={scorecardState.reasoningText ?? undefined}
+                  currentQuestionNumber={scorecardState.currentQuestionNumber}
+                  maxQuestions={scorecardState.maxQuestions}
+                  assessmentPhases={scorecardState.assessmentPhases}
+                  reasoningText={scorecardState.reasoningText || undefined}
                   isAutoCompleting={isAutoCompleting}
                   setIsAutoCompleting={setIsAutoCompleting}
                   setAutoCompleteError={setAutoCompleteError}
                   handleStartAutoComplete={handleStartAutoComplete}
                   overallStatus={scorecardState.overall_status}
+                  questionAnswerHistory={scorecardState.history}
+                  industry={scorecardState.industry}
                 />
               )}
               {/* Show loading placeholder if loading and no question yet */}
@@ -442,10 +481,19 @@ export default function Home() {
                   <p>Loading assessment questions...</p>
                 </div>
               )}
+              {/* In the assessment step, show a message if no question is present */}
+              {currentStep === 'assessment' && !scorecardState.currentQuestion && !scorecardState.isLoading && (
+                <div className="w-full p-6 border rounded-lg shadow-md text-gray-800 bg-white">
+                  <p>No question available. The assessment may be complete or failed to load. Please restart the assessment.</p>
+                </div>
+              )}
             </div>
           )}
           {currentStep === 'results' && scorecardState.reportMarkdown && (
-            <ScorecardResultsDisplay reportMarkdown={scorecardState.reportMarkdown} />
+            <ScorecardResultsDisplay 
+              reportMarkdown={scorecardState.reportMarkdown} 
+              questionAnswerHistory={scorecardState.history}
+            />
           )}
           {currentStep === 'results' && !scorecardState.reportMarkdown && scorecardState.isLoading && (
             <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8 border border-[#e5e7eb] text-gray-800 text-center">
@@ -454,6 +502,19 @@ export default function Home() {
           )}
         </main>
       </div>
+      {/* Show final loading state when generating report (just before results page) */}
+      {isGeneratingFinalReport && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full text-center">
+            <div className="mb-6">
+              <div className="w-16 h-16 border-4 border-[#68F6C8] border-t-[#004851] rounded-full animate-spin mx-auto"></div>
+            </div>
+            <h3 className="text-2xl font-bold text-[#004851] mb-3">Generating Your AI Scorecard</h3>
+            <p className="text-gray-600 mb-2">This may take a moment as we analyze your answers and create a personalized report.</p>
+            <p className="text-gray-500 text-sm">Please don't close this window.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

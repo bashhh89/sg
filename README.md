@@ -1,3 +1,75 @@
+# AI Efficiency Scorecard
+
+## Project Overview
+
+The AI Efficiency Scorecard is an interactive assessment tool that helps organizations evaluate their AI maturity level and receive personalized recommendations.
+
+## ⚠️ Important Setup Instructions ⚠️
+
+This project has a nested directory structure. Make sure you are in the correct directory before running commands.
+
+### Correct Directory Structure:
+
+```
+E:\final\             <- Root project folder (outer final)
+└── final\            <- Actual Next.js application (inner final)
+    ├── app\
+    ├── components\
+    ├── package.json  <- This is where the npm/pnpm scripts are defined
+    └── ...
+```
+
+### Setup Steps:
+
+1. Navigate to the inner "final" directory:
+   ```bash
+   cd final
+   ```
+
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+3. Run the development server:
+   ```bash
+   pnpm run dev
+   ```
+
+4. The application will be available at:
+   ```
+   http://localhost:3003
+   ```
+
+## Key Features
+
+- Industry-specific AI maturity assessment
+- Comprehensive question flow across multiple phases
+- AI-powered report generation
+- Auto-complete testing functionality
+- Collapsible Q&A history for result review
+
+## Available Scripts
+
+Inside the inner "final" directory:
+
+- `pnpm run dev` - Starts the development server on port 3003
+- `pnpm run build` - Builds the application for production
+- `pnpm run start` - Runs the built application in production mode
+- `pnpm run lint` - Runs ESLint to check for code quality issues
+
+## Project Documents
+
+- `project-overview.md` - Non-technical overview of the project
+- `progress.md` - Detailed progress report with completed features and next steps
+
+## Troubleshooting
+
+If you encounter issues with running scripts, make sure:
+1. You are in the inner "final" directory
+2. You have all dependencies installed
+3. You are using the correct package manager (pnpm)
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
