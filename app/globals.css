@@ -3,22 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8faf9;
-  --foreground: #004851;
-  --primary: #68F6C8;
-  --primary-foreground: #004851;
+  --background: #F3FDF5;
+  --foreground: #103138;
+  --primary: #20E28F;
+  --primary-foreground: #103138;
   --secondary: #e6fbf1;
-  --secondary-foreground: #004851;
-  --accent: #4388dd;
+  --secondary-foreground: #103138;
+  --accent: #01CEFE;
   --muted: #f1f5f5;
   --muted-foreground: #677171;
   --card: #ffffff;
-  --card-foreground: #004851;
+  --card-foreground: #103138;
   --border: #e6ebeb;
   --input: #f1f5f5;
-  --ring: #68F6C8;
+  --ring: #20E28F;
   
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
@@ -71,7 +71,7 @@ body {
 
   /* Consistent Form Elements */
   input, select, textarea {
-    @apply bg-white border border-gray-200 rounded-sg-md px-3 py-2 text-sg-gray-800 focus:outline-none focus:ring-2 focus:ring-sg-mint-green focus:border-transparent transition-all duration-200;
+    @apply bg-white border border-gray-200 rounded-sg-md px-3 py-2 text-sg-dark-teal focus:outline-none focus:ring-2 focus:ring-sg-bright-green focus:border-transparent transition-all duration-200;
   }
 
   button {
@@ -95,37 +95,169 @@ body {
     @apply visible opacity-100;
   }
 
-  /* Card with consistent styling */
+  /* Enhanced Cards */
   .sg-card {
     @apply bg-white rounded-sg-xl border border-gray-100 shadow-sg-card p-6 transition-all duration-200;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sg-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(to right, #20E28F, #01CEFE);
+    transform: scaleX(0.95);
+    opacity: 0;
+    transition: all 0.3s ease;
   }
 
   .sg-card:hover {
     @apply shadow-sg-card-hover;
   }
 
+  .sg-card:hover::before {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  /* Featured Card */
+  .sg-card-featured {
+    @apply bg-white rounded-sg-xl border border-gray-100 shadow-sg-xl p-6 transition-all duration-200;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(to bottom right, white, #F3FDF5);
+  }
+
+  .sg-card-featured::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(to right, #20E28F, #01CEFE);
+  }
+
   /* Primary button */
   .sg-button-primary {
-    @apply bg-sg-mint-green text-sg-dark-teal font-medium px-4 py-2 rounded-sg-lg hover:bg-sg-mint-green/90 transition-all duration-200 shadow-sm hover:shadow-md;
+    @apply bg-sg-bright-green text-sg-dark-teal font-medium px-6 py-3 rounded-sg-lg hover:bg-sg-bright-green/90 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5;
   }
 
   /* Secondary button */
   .sg-button-secondary {
-    @apply bg-white text-sg-dark-teal border border-sg-mint-green/30 font-medium px-4 py-2 rounded-sg-lg hover:bg-sg-light-mint transition-all duration-200;
+    @apply bg-white text-sg-dark-teal border border-sg-bright-green/30 font-medium px-6 py-3 rounded-sg-lg hover:bg-sg-light-mint transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5;
   }
 
-  /* Icons with consistent styling */
-  .sg-icon {
-    @apply inline-flex items-center justify-center;
+  /* Sidebar Navigation */
+  .sg-sidebar {
+    @apply fixed left-0 top-0 h-full bg-sg-dark-teal text-white transition-all duration-300 ease-in-out z-40 flex flex-col shadow-xl;
+    width: 260px;
+  }
+
+  .sg-sidebar-collapsed {
+    width: 70px;
+  }
+
+  .sg-sidebar-header {
+    @apply p-4 flex items-center justify-between border-b border-white/10;
+  }
+
+  .sg-sidebar-link {
+    @apply flex items-center space-x-3 px-4 py-3 text-white/80 hover:text-white hover:bg-sg-dark-teal/50 transition-all;
+  }
+
+  .sg-sidebar-link.active {
+    @apply bg-sg-bright-green/10 text-sg-bright-green border-l-4 border-sg-bright-green;
+  }
+
+  .sg-sidebar-section {
+    @apply mt-4 px-4 py-2 text-xs uppercase tracking-wider text-white/50;
+  }
+
+  /* Main Content Container - Updated for better layout */
+  .main-content-wrapper {
+    @apply flex-1 transition-all duration-300 ease-in-out;
+    margin-left: 260px; /* Match sidebar width */
+  }
+
+  .main-content-wrapper-expanded {
+    margin-left: 70px; /* Match collapsed sidebar width */
+  }
+
+  /* Content padding container */
+  .content-container {
+    @apply p-6 md:p-8 max-w-7xl mx-auto;
+  }
+
+  /* Responsive sidebar */
+  @media (max-width: 768px) {
+    .sg-sidebar {
+      width: 100%;
+      transform: translateX(-100%);
+    }
+    
+    .sg-sidebar-collapsed {
+      transform: translateX(-100%);
+      width: 70px;
+    }
+    
+    .sg-sidebar-visible {
+      transform: translateX(0);
+    }
+    
+    .main-content-wrapper,
+    .main-content-wrapper-expanded {
+      margin-left: 0;
+    }
+  }
+
+  /* Disable old main content classes */
+  .sg-main-content, .sg-main-content-full {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Timeline Component */
+  .sg-timeline {
+    @apply relative ml-6;
+  }
+
+  .sg-timeline::before {
+    content: '';
+    @apply absolute left-0 top-0 h-full w-0.5 bg-gray-200 -ml-3;
+  }
+
+  .sg-timeline-item {
+    @apply relative pb-8;
+  }
+
+  .sg-timeline-item::before {
+    content: '';
+    @apply absolute left-0 top-2 h-4 w-4 rounded-full bg-sg-bright-green -ml-5 border-4 border-white;
+  }
+
+  .sg-timeline-item.active::before {
+    @apply bg-sg-bright-green ring-4 ring-sg-bright-green/20;
+  }
+
+  .sg-timeline-item.completed::before {
+    @apply bg-sg-dark-teal;
+  }
+
+  .sg-timeline-item.upcoming::before {
+    @apply bg-gray-300;
   }
 
   /* Badge styles */
   .sg-badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
   }
 
   .sg-badge-primary {
-    @apply bg-sg-mint-green/20 text-sg-dark-teal;
+    @apply bg-sg-bright-green/20 text-sg-dark-teal;
   }
 
   .sg-badge-secondary {
@@ -134,6 +266,55 @@ body {
 
   .sg-badge-accent {
     @apply bg-sg-accent-blue/20 text-sg-accent-blue;
+  }
+  
+  /* Typography styles based on design spec */
+  .title-text {
+    @apply text-title font-semibold text-sg-dark-teal;
+  }
+  
+  .section-text {
+    @apply text-section font-medium text-sg-dark-teal;
+  }
+
+  /* Progress Bar */
+  .sg-progress-container {
+    @apply w-full h-2 bg-gray-200 rounded-full overflow-hidden;
+  }
+
+  .sg-progress-bar {
+    @apply h-full bg-gradient-to-r from-sg-bright-green to-sg-light-blue transition-all duration-500 ease-out;
+  }
+
+  /* Assessment Card */
+  .sg-assessment-card {
+    @apply bg-white rounded-sg-xl border border-gray-100 shadow-sg-card transition-all duration-200 overflow-hidden;
+  }
+
+  .sg-assessment-card-header {
+    @apply bg-sg-dark-teal text-white p-4 border-b border-sg-dark-teal/20;
+  }
+
+  .sg-assessment-card-body {
+    @apply p-6;
+  }
+
+  /* Question Cards */
+  .sg-question-card {
+    @apply p-6 bg-white rounded-xl shadow-md border border-gray-100 transition-all duration-200;
+  }
+
+  .sg-question-card:hover {
+    @apply shadow-lg border-sg-bright-green/30;
+  }
+
+  /* Answer Options */
+  .sg-answer-option {
+    @apply flex items-center p-4 border-2 border-gray-200 rounded-lg transition-all cursor-pointer mb-3 hover:border-sg-bright-green/50 hover:bg-sg-light-mint;
+  }
+
+  .sg-answer-option.selected {
+    @apply border-sg-bright-green bg-sg-bright-green/10 shadow-md;
   }
 }
 
@@ -155,4 +336,50 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
+}
+
+/* Add the animation for our CourseModule component */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Add slide-in animation for sidebar */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.4s ease-out forwards;
+}
+
+/* Add content fade-in animation */
+@keyframes contentFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: contentFadeIn 0.6s ease-out forwards;
 }

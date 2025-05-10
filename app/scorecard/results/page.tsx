@@ -10,6 +10,8 @@ import IllustrativeBenchmarksSection from '@/components/scorecard/sections/Illus
 import PersonalizedLearningPathSection from '@/components/scorecard/sections/PersonalizedLearningPathSection';
 import AssessmentQABreakdownSection from '@/components/scorecard/sections/AssessmentQABreakdownSection';
 import LearningHubDirectionSection from '@/components/scorecard/sections/LearningHubDirectionSection';
+import ScorecardResultsDisplay from '@/components/ScorecardResultsDisplay';
+import { Loader } from '@/components/learning-hub/loader';
 
 // Helper to extract sections from the Markdown string
 function extractSections(markdown: string): Record<string, string> {
@@ -59,47 +61,77 @@ const cardTitles: Record<string, string> = {
   'Assessment Q&A Breakdown': 'Assessment Q&A Breakdown',
 };
 
+// Define the history entry interface
+interface HistoryEntry {
+  question: string;
+  answer: any;
+  phaseName?: string;
+}
+
 export default function ScorecardResultsPage() {
-  // State to store the report and history data loaded from sessionStorage
-  const [reportMarkdown, setReportMarkdown] = useState<string>('');
-  const [questionAnswerHistory, setQuestionAnswerHistory] = useState<any[]>([]);
+  const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
+  const [questionAnswerHistory, setQuestionAnswerHistory] = useState<HistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState("Loading your AI scorecard results...");
+  const [error, setError] = useState<string | null>(null);
   const [tabChanging, setTabChanging] = useState(false);
 
-  // Load data from sessionStorage when component mounts
   useEffect(() => {
-    // Function to load data from sessionStorage
-    const loadDataFromStorage = () => {
+    // Fetch report markdown content
+    const fetchReport = async () => {
+      setIsLoading(true);
       try {
+        // Try to get data from sessionStorage first
         const reportData = sessionStorage.getItem('reportMarkdown');
         const historyData = sessionStorage.getItem('questionAnswerHistory');
         
-        if (reportData) {
+        if (reportData && historyData) {
+          console.log('FRONTEND: Using cached data from sessionStorage');
           setReportMarkdown(reportData);
-        } else {
-          console.error('No report data found in sessionStorage');
+          const parsedHistory = JSON.parse(historyData);
+          setQuestionAnswerHistory(parsedHistory);
+          console.log('FRONTEND: Loaded question history with', parsedHistory.length, 'items');
+          setIsLoading(false);
+          return;
         }
         
-        if (historyData) {
-          setQuestionAnswerHistory(JSON.parse(historyData));
-        } else {
-          console.error('No question history found in sessionStorage');
+        // If not in sessionStorage, try localStorage
+        const localReportData = localStorage.getItem('reportMarkdown');
+        const localHistoryData = localStorage.getItem('questionAnswerHistory');
+        
+        if (localReportData && localHistoryData) {
+          console.log('FRONTEND: Using cached data from localStorage');
+          setReportMarkdown(localReportData);
+          const parsedHistory = JSON.parse(localHistoryData);
+          setQuestionAnswerHistory(parsedHistory);
+          console.log('FRONTEND: Loaded question history with', parsedHistory.length, 'items from localStorage');
+          
+          // Also update sessionStorage for next time
+          sessionStorage.setItem('reportMarkdown', localReportData);
+          sessionStorage.setItem('questionAnswerHistory', localHistoryData);
+          
+          setIsLoading(false);
+          return;
         }
         
+        // If we reach here, no data was found in storage
+        setError("Could not find your scorecard results. Please complete the assessment first.");
         setIsLoading(false);
       } catch (error) {
-        console.error('Error loading data from sessionStorage:', error);
+        console.error('Error loading scorecard results:', error);
+        setError('An error occurred while loading your results. Please try again.');
         setIsLoading(false);
       }
     };
-    
-    // Load data if in browser environment
-    if (typeof window !== 'undefined') {
-      loadDataFromStorage();
-    }
+
+    fetchReport();
   }, []);
 
-  const sections = useMemo(() => extractSections(reportMarkdown), [reportMarkdown]);
+  const sections = useMemo(() => {
+    const extracted = extractSections(reportMarkdown || '');
+    console.log('FRONTEND: Extracted sections:', extracted);
+    return extracted;
+  }, [reportMarkdown]);
   
   const extractedTier = useMemo(() => {
     if (!sections['Overall Tier']) return null;
@@ -128,36 +160,26 @@ export default function ScorecardResultsPage() {
 
   const currentSectionMarkdown = sections[activeTab] || '';
 
-  // Show loading state while data is being fetched
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-sg-off-white text-sg-dark-teal font-sans flex items-center justify-center">
-        <div className="text-center animate-sg-fade-in">
-          <div className="w-16 h-16 border-4 border-sg-mint-green border-t-sg-dark-teal rounded-full animate-spin mx-auto mb-6"></div>
-          <h2 className="text-heading-2 font-bold">Loading Your Scorecard</h2>
-          <p className="text-sg-gray-600 mt-2 text-body">Your results are being prepared...</p>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <Loader size="large" />
+        <p className="mt-4 text-sg-dark-teal/80">{loadingMessage}</p>
       </div>
     );
   }
 
-  // Show error state if no data was found
-  if (!reportMarkdown) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-sg-off-white text-sg-dark-teal font-sans flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8 bg-white rounded-sg-2xl shadow-sg-lg animate-sg-fade-in">
-          <div className="w-16 h-16 mx-auto mb-4 text-sg-gray-400">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <h2 className="text-heading-2 font-bold mb-4">Scorecard Not Found</h2>
-          <p className="text-sg-gray-700 mb-6">We couldn't find your scorecard results. You may need to complete the assessment first.</p>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="max-w-2xl w-full bg-white p-8 rounded-xl shadow-lg">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
+          <p className="text-gray-700 mb-6">{error}</p>
           <a 
             href="/" 
-            className="sg-button-primary inline-block"
+            className="inline-block px-6 py-3 bg-sg-bright-green text-white font-semibold rounded-lg shadow-md hover:bg-sg-bright-green/90 transition-colors"
           >
-            Start Assessment
+            Back to Assessment
           </a>
         </div>
       </div>
@@ -165,111 +187,28 @@ export default function ScorecardResultsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-sg-off-white text-sg-dark-teal font-sans">
-      {/* Background subtle patterns */}
-      <div className="absolute inset-0 bg-sg-off-white opacity-90 z-0"></div>
-      
-      {/* Decorative elements */}
-      <div className="absolute top-0 right-0 w-1/3 h-screen bg-gradient-to-bl from-sg-mint-green/10 via-transparent to-transparent z-0"></div>
-      <div className="absolute bottom-0 left-0 w-1/2 h-1/3 bg-gradient-to-tr from-sg-mint-green/5 via-transparent to-transparent z-0"></div>
-      <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-sg-mint-green/5 blur-3xl z-0"></div>
-      <div className="absolute bottom-20 right-20 w-96 h-96 rounded-full bg-sg-dark-teal/5 blur-3xl z-0"></div>
-      
-      <div className="relative z-10 flex flex-col md:flex-row min-h-screen">
-        {/* Left sidebar with tabs */}
-        <ReportSidebar
-          activeTab={activeTab}
-          setActiveTab={handleTabChange}
-          cardOrder={cardOrder}
-          cardTitles={cardTitles}
-          companyName={undefined}
+    <div className="min-h-screen flex flex-col">
+      {reportMarkdown && questionAnswerHistory ? (
+        <ScorecardResultsDisplay 
+          reportMarkdown={reportMarkdown} 
+          questionAnswerHistory={questionAnswerHistory}
         />
-        
-        {/* Main content area */}
-        <div className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto">
-          {/* Header and Action Bar */}
-          <MainContentHeader
-            activeTabTitle={cardTitles[activeTab]}
-            reportMarkdown={reportMarkdown}
-          />
-          
-          {/* Content card with shadow */}
-          <div className="relative mt-8 animate-sg-fade-in">
-            {/* Shadow/glow effect for the card */}
-            <div className="absolute inset-0 bg-gradient-to-br from-sg-mint-green/20 to-sg-dark-teal/10 blur-xl rounded-sg-3xl transform translate-y-4 scale-95 z-0"></div>
-            
-            {/* Main content card */}
-            <div className={`relative bg-white border border-gray-100 rounded-sg-3xl p-6 md:p-8 lg:p-10 shadow-sg-xl z-10 ${tabChanging ? 'opacity-0 transform translate-y-4 transition-all duration-200' : 'opacity-100 transform translate-y-0 transition-all duration-200'}`}>
-              {/* Overall Tier Section */}
-              {activeTab === 'Overall Tier' && sections['Overall Tier'] && (
-                <OverallTierSection
-                  markdownContent={sections['Overall Tier']}
-                  extractedTier={extractedTier}
-                />
-              )}
-              
-              {/* Key Findings Section */}
-              {activeTab === 'Key Findings' && sections['Key Findings'] && (
-                <KeyFindingsSection markdownContent={sections['Key Findings']} />
-              )}
-              
-              {/* Strategic Action Plan Section */}
-              {activeTab === 'Strategic Action Plan' && sections['Strategic Action Plan'] && (
-                <StrategicActionPlanSection markdownContent={sections['Strategic Action Plan']} />
-              )}
-              
-              {/* Getting Started & Resources Section */}
-              {activeTab === 'Getting Started & Resources' && sections['Getting Started & Resources'] && (
-                <GettingStartedResourcesSection markdownContent={sections['Getting Started & Resources']} />
-              )}
-              
-              {/* Illustrative Benchmarks Section */}
-              {activeTab === 'Illustrative Benchmarks' && sections['Illustrative Benchmarks'] && (
-                <IllustrativeBenchmarksSection markdownContent={sections['Illustrative Benchmarks']} />
-              )}
-              
-              {/* Personalized Learning Path Section */}
-              {activeTab === 'Personalized Learning Path' && sections['Personalized Learning Path'] && (
-                <PersonalizedLearningPathSection markdownContent={sections['Personalized Learning Path']} />
-              )}
-              
-              {/* Learning Hub Direction Section */}
-              {activeTab === 'Learning Hub' && (
-                <LearningHubDirectionSection tierLevel={extractedTier || undefined} />
-              )}
-              
-              {/* Assessment Q&A Breakdown Section */}
-              {activeTab === 'Assessment Q&A Breakdown' && (
-                <AssessmentQABreakdownSection questionAnswerHistory={questionAnswerHistory} />
-              )}
-              
-              {/* Fallback for empty/unknown sections */}
-              {!currentSectionMarkdown && activeTab !== 'Assessment Q&A Breakdown' && activeTab !== 'Learning Hub' && (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 mx-auto mb-4 text-sg-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-heading-3 font-semibold text-sg-dark-teal mb-4">Content Not Available</h3>
-                  <p className="text-sg-gray-600 max-w-md mx-auto">The content for the section "{cardTitles[activeTab]}" is currently not available or is being processed.</p>
-                </div>
-              )}
-              
-              {/* Back to top button (visible when scrolled down) */}
-              <button 
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="fixed bottom-6 right-6 bg-white text-sg-dark-teal p-3 rounded-full shadow-sg-md hover:shadow-sg-lg transition-all duration-200 opacity-80 hover:opacity-100"
-                aria-label="Back to top"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="max-w-2xl w-full bg-white p-8 rounded-xl shadow-lg">
+            <h1 className="text-2xl font-bold text-sg-dark-teal mb-4">No Results Found</h1>
+            <p className="text-gray-700 mb-6">
+              Please complete the AI Efficiency Scorecard assessment to view your results.
+            </p>
+            <a 
+              href="/" 
+              className="inline-block px-6 py-3 bg-sg-bright-green text-white font-semibold rounded-lg shadow-md hover:bg-sg-bright-green/90 transition-colors"
+            >
+              Take the Assessment
+            </a>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 } 

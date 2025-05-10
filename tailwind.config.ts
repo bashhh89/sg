@@ -9,10 +9,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'sg-dark-teal': '#004851',
-        'sg-mint-green': '#68F6C8',
-        'sg-light-mint': '#e6fbf1',
-        'sg-off-white': '#f8faf9',
+        'sg-bright-green': '#20E28F',
+        'sg-dark-teal': '#103138',
+        'sg-light-mint': '#F3FDF5',
+        'sg-orange': '#FE7F01',
+        'sg-yellow': '#FEC401',
+        'sg-light-blue': '#01CEFE',
+        'sg-bright-yellow': '#FFFF00',
+        'sg-cream-1': '#FFF9F2',
+        'sg-cream-2': '#FFFCF2',
+        'sg-light-blue-bg': '#F5FDFF',
         'sg-gray': {
           100: '#f1f5f5',
           200: '#e6ebeb',
@@ -38,6 +44,8 @@ const config: Config = {
         'body': ['1rem', { lineHeight: '1.5rem' }],
         'body-sm': ['0.875rem', { lineHeight: '1.25rem' }],
         'caption': ['0.75rem', { lineHeight: '1rem' }],
+        'title': '22px',
+        'section': '18px',
       },
       boxShadow: {
         'sg-sm': '0 1px 2px rgba(0, 72, 81, 0.05), 0 1px 3px rgba(0, 72, 81, 0.1)',
@@ -45,8 +53,11 @@ const config: Config = {
         'sg-lg': '0 10px 15px -3px rgba(0, 72, 81, 0.05), 0 4px 6px -2px rgba(0, 72, 81, 0.1)',
         'sg-xl': '0 20px 25px -5px rgba(0, 72, 81, 0.05), 0 10px 10px -5px rgba(0, 72, 81, 0.1)',
         'sg-2xl': '0 25px 50px -12px rgba(0, 72, 81, 0.15)',
-        'sg-card': '0 4px 12px rgba(0, 72, 81, 0.08)',
-        'sg-card-hover': '0 8px 24px rgba(0, 72, 81, 0.12), 0 2px 8px rgba(0, 72, 81, 0.06)',
+        'sg-card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+        'sg-card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)',
+        'sg-button': '0 2px 4px 0 rgba(0, 0, 0, 0.05)',
+        'sg-button-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        'sg-sidebar': '0 0 15px rgba(0, 0, 0, 0.05)',
       },
       borderRadius: {
         'sg-sm': '0.375rem',
@@ -69,9 +80,9 @@ const config: Config = {
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic": "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
-        'sg-gradient-primary': 'linear-gradient(to right, #004851, #006970)',
-        'sg-gradient-mint': 'linear-gradient(to bottom right, #f8faf9, #e6fbf1)',
-        'sg-gradient-card': 'linear-gradient(to bottom right, #ffffff, #f8faf9)',
+        'sg-gradient-primary': 'linear-gradient(to right, #103138, #135e69)',
+        'sg-gradient-mint': 'linear-gradient(to bottom right, #F3FDF5, #e6fbf1)',
+        'sg-gradient-card': 'linear-gradient(to bottom right, #ffffff, #F3FDF5)',
       },
       animation: {
         'sg-fade-in': 'fadeIn 0.3s ease-in-out',
@@ -90,6 +101,55 @@ const config: Config = {
         slideDown: {
           '0%': { transform: 'translateY(-10px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+      },
+      fontFamily: {
+        'plus-jakarta': ['var(--font-plus-jakarta)', 'system-ui', 'sans-serif'],
+        'geist-sans': ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+        'geist-mono': ['var(--font-geist-mono)', 'monospace'],
+      },
+      typography: {
+        DEFAULT: {
+          css: {
+            color: '#103138',
+            a: {
+              color: '#20E28F',
+              '&:hover': {
+                color: '#103138',
+              },
+            },
+            h1: {
+              color: '#103138',
+            },
+            h2: {
+              color: '#103138',
+            },
+            h3: {
+              color: '#103138',
+            },
+            h4: {
+              color: '#103138',
+            },
+            strong: {
+              color: '#103138',
+            },
+            blockquote: {
+              color: '#103138',
+              borderLeftColor: '#20E28F',
+            },
+            'ul > li::before': {
+              backgroundColor: '#20E28F',
+            },
+            hr: {
+              borderColor: '#F3FDF5',
+            },
+            pre: {
+              backgroundColor: '#103138',
+            },
+            code: {
+              color: '#103138',
+            },
+          },
         },
       },
     },

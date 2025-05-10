@@ -30,8 +30,10 @@ const AssessmentQABreakdownSection: React.FC<AssessmentQABreakdownSectionProps> 
     questionsByPhase[phase].push(qa);
   });
 
-  // If no phases are available, just render all questions
-  const hasPhases = Object.keys(questionsByPhase).length > 1;
+  // If no phases are available or all questions are unphased
+  const phases = Object.keys(questionsByPhase).length > 0 
+    ? Object.keys(questionsByPhase) 
+    : ['All Questions'];
 
   const toggleQuestion = (index: number) => {
     if (expandedQuestion === index) {
@@ -64,13 +66,13 @@ const AssessmentQABreakdownSection: React.FC<AssessmentQABreakdownSectionProps> 
         </div>
       </div>
 
-      {hasPhases ? (
+      {phases.length > 1 ? (
         // Render questions grouped by phase
-        Object.entries(questionsByPhase).map(([phase, questions], phaseIndex) => (
+        phases.map((phase, phaseIndex) => (
           <div key={phase} className="mb-10">
             <h4 className="text-xl font-bold text-[#004851] mb-4 pb-2 border-b border-[#68F6C8]/30">{phase}</h4>
             <div className="space-y-4">
-              {questions.map((qa, qaIndex) => {
+              {questionsByPhase[phase].map((qa, qaIndex) => {
                 const globalIndex = questionAnswerHistory.findIndex(q => q === qa);
                 return (
                   <div 

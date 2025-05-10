@@ -102,13 +102,13 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
     });
   };
   
-  // Render the appropriate input based on answerType
+  // Update the checkbox/radio rendering to use grid layout
   const renderAnswerInput = () => {
     switch (normalizedAnswerType) {
       case 'text':
         return (
           <textarea
-            className="w-full p-3 border border-gray-200 rounded-lg mt-2 min-h-[100px] focus:ring-2 focus:ring-[#A6F4C5] focus:border-[#A6F4C5] text-gray-800 font-sans shadow-sm transition-all"
+            className="w-full p-4 border border-gray-200 rounded-lg mt-3 min-h-[120px] focus:ring-2 focus:ring-sg-bright-green focus:border-sg-bright-green text-sg-dark-teal font-plus-jakarta shadow-sm transition-all"
             value={currentAnswer}
             onChange={(e) => setCurrentAnswer(e.target.value)}
             placeholder="Type your answer here..."
@@ -117,103 +117,101 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
         );
       case 'radio':
         return (
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
             {options?.map((option) => {
               const selected = currentAnswer === option;
               return (
-                <button
-                  type="button"
+                <div 
                   key={option}
-                  onClick={() => setCurrentAnswer(option)}
-                  disabled={isLoading}
-                  className={
-                    `w-full flex items-center px-4 py-3 rounded-lg shadow-sm border-2 transition-all duration-150 text-base font-semibold ` +
-                    (selected
-                      ? 'bg-[#A6F4C5] border-[#A6F4C5] text-[#0a3d3d] scale-[1.03]'
-                      : 'bg-white border-gray-200 text-gray-800 hover:bg-[#0a3d3d] hover:text-white hover:border-[#A6F4C5]')
-                  }
-                  style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
+                  className={`sg-answer-option ${selected ? 'selected' : ''}`}
+                  onClick={() => !isLoading && setCurrentAnswer(option)}
                 >
-                  <span className="mr-3">
-                    <span className={
-                      `inline-block w-4 h-4 rounded-full border-2 align-middle mr-1 ` +
-                      (selected
-                        ? 'bg-[#0a3d3d] border-[#0a3d3d]'
-                        : 'bg-white border-[#A6F4C5]')
-                    }></span>
-                  </span>
-                  {option}
-                </button>
+                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center transition-all ${selected ? 'border-sg-bright-green bg-white' : 'border-gray-300'}`}>
+                    {selected && (
+                      <div className="w-3 h-3 rounded-full bg-sg-bright-green"></div>
+                    )}
+                  </div>
+                  <span>{option}</span>
+                </div>
               );
             })}
           </div>
         );
       case 'checkbox':
         return (
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
             {options?.map((option) => {
               const checked = (currentAnswer as string[]).includes(option);
               return (
-                <button
-                  type="button"
+                <div 
                   key={option}
+                  className={`sg-answer-option ${checked ? 'selected' : ''}`}
                   onClick={() => {
-                    if (checked) {
-                      setCurrentAnswer((prev: string[]) => prev.filter(item => item !== option));
-                    } else {
-                      setCurrentAnswer((prev: string[]) => [...prev, option]);
+                    if (!isLoading) {
+                      if (checked) {
+                        setCurrentAnswer((prev: string[]) => prev.filter(item => item !== option));
+                      } else {
+                        setCurrentAnswer((prev: string[]) => [...prev, option]);
+                      }
                     }
                   }}
-                  disabled={isLoading}
-                  className={
-                    `w-full flex items-center px-4 py-3 rounded-lg shadow-sm border-2 transition-all duration-150 text-base font-semibold ` +
-                    (checked
-                      ? 'bg-[#A6F4C5] border-[#A6F4C5] text-[#0a3d3d] scale-[1.03]'
-                      : 'bg-white border-gray-200 text-gray-800 hover:bg-[#0a3d3d] hover:text-white hover:border-[#A6F4C5]')
-                  }
-                  style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
                 >
-                  <span className="mr-3">
-                    <span className={
-                      `inline-block w-4 h-4 rounded border-2 align-middle mr-1 ` +
-                      (checked
-                        ? 'bg-[#0a3d3d] border-[#0a3d3d]'
-                        : 'bg-white border-[#A6F4C5]')
-                    }></span>
-                  </span>
-                  {option}
-                </button>
+                  <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all ${checked ? 'border-sg-bright-green bg-white' : 'border-gray-300'}`}>
+                    {checked && (
+                      <svg className="w-3 h-3 text-sg-bright-green" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <span>{option}</span>
+                </div>
               );
             })}
           </div>
         );
       case 'scale':
         return (
-          <div className="flex justify-center gap-3 mt-2">
-            {options?.map((option) => {
-              const selected = currentAnswer === option;
-              return (
-                <button
-                  type="button"
-                  key={option}
-                  onClick={() => setCurrentAnswer(option)}
-                  disabled={isLoading}
-                  className={
-                    `flex items-center justify-center px-4 py-2 rounded-lg shadow-sm border-2 transition-all duration-150 text-base font-semibold min-w-[48px] ` +
-                    (selected
-                      ? 'bg-[#A6F4C5] border-[#A6F4C5] text-[#0a3d3d] scale-[1.07]'
-                      : 'bg-white border-gray-200 text-gray-800 hover:bg-[#0a3d3d] hover:text-white hover:border-[#A6F4C5]')
-                  }
-                  style={{ cursor: isLoading ? 'not-allowed' : 'pointer' }}
-                >
-                  {option}
-                </button>
-              );
-            })}
+          <div className="my-6">
+            <div className="flex justify-between mb-2 text-sm text-sg-dark-teal/70">
+              <span>Not at all</span>
+              <span>Very much</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              {options?.map((option) => {
+                const selected = currentAnswer === option;
+                return (
+                  <button
+                    type="button"
+                    key={option}
+                    onClick={() => setCurrentAnswer(option)}
+                    disabled={isLoading}
+                    className={`
+                      relative flex-1 h-14 rounded-lg transition-all duration-200 font-semibold text-lg
+                      ${selected 
+                        ? 'bg-sg-bright-green text-white shadow-md transform -translate-y-1' 
+                        : 'bg-white border border-gray-200 text-sg-dark-teal hover:bg-sg-light-mint hover:border-sg-bright-green/50'}
+                    `}
+                  >
+                    {option}
+                    {selected && (
+                      <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-sm font-normal">
+                        <svg className="w-5 h-5 text-sg-bright-green mx-auto" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         );
       default:
-        return <p style={{ color: 'red', marginTop: '10px' }}>Error: Unsupported answer type '{normalizedAnswerType}'</p>;
+        return (
+          <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg">
+            <p>Error: Unsupported answer type '{normalizedAnswerType}'</p>
+          </div>
+        );
     }
   };
   
@@ -250,6 +248,15 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
   // Robust auto-complete useEffect pattern
   useEffect(() => {
     if (isAutoCompleting && question && answerType && !isLoadingLocally && !isLoading) {
+      // Check if we've reached or are about to reach the maximum number of questions
+      // We check against maxQuestions - 1 because the current question being displayed
+      // will be the final question when questionAnswerHistory.length is maxQuestions - 1
+      if (questionAnswerHistory.length >= maxQuestions - 1) {
+        console.log(`Auto-complete stopped: Reached ${questionAnswerHistory.length} questions out of max ${maxQuestions}`);
+        setIsAutoCompleting(false);
+        return;
+      }
+      
       if (autoCompleteCount >= 30) {
         setIsAutoCompleting(false);
         setAutoCompleteError('Auto-complete reached maximum question limit (30)');
@@ -346,259 +353,120 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
   // Test Persona Tier Selector
   const renderTestPersonaTierSelector = () => {
     return (
-      <div style={{ marginBottom: '1.5rem', padding: '12px', border: '1px dashed #cbd5e0', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
-        <div style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '0.9rem', color: '#4a5568' }}>
-          <span style={{ marginRight: '4px' }}>🧪</span> Testing Tools (Internal Use Only)
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-          <label style={{ marginRight: '10px', fontSize: '0.9rem', color: '#666' }}>
-            Select Test Persona Tier:
-          </label>
-          <select
-            value={testPersonaTier}
-            onChange={(e) => setTestPersonaTier(e.target.value as 'Dabbler' | 'Enabler' | 'Leader')}
-            disabled={isAutoCompleting || isLoading}
-            style={{
-              padding: '0.4rem',
-              borderRadius: '6px',
-              border: '1px solid #ddd',
-              backgroundColor: '#fff',
-              color: '#333',
-              cursor: isAutoCompleting || isLoading ? 'not-allowed' : 'pointer',
-              opacity: isAutoCompleting || isLoading ? 0.6 : 1
-            }}
-          >
-            <option value="Dabbler">Dabbler</option>
-            <option value="Enabler">Enabler</option>
-            <option value="Leader">Leader</option>
-          </select>
-        </div>
-        
-        <div style={{ fontSize: '0.8rem', color: '#718096', marginBottom: '10px', fontStyle: 'italic' }}>
-          Note: Auto-complete is for testing purposes only. It simulates answers based on selected persona tier.
-        </div>
-        
-        {/* Auto-Complete Button for Testing */}
-        <button
-          onClick={handleStartAutoComplete}
-          disabled={isAutoCompleting || isLoading}
-          style={{
-            background: '#f59e42',
-            color: '#fff',
-            fontSize: '0.9rem',
-            borderRadius: '6px',
-            padding: '0.5rem 1rem',
-            marginBottom: '0.5rem',
-            width: '100%',
-            display: isAutoCompleting ? 'none' : 'block',
-            opacity: isAutoCompleting || isLoading ? 0.6 : 1,
-            cursor: isAutoCompleting || isLoading ? 'not-allowed' : 'pointer',
-            border: 'none',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.07)'
-          }}
-        >
-          {isAutoCompleting ? 'Auto-Completing...' : 'Auto-Complete Assessment (Testing Only)'}
-        </button>
-        
-        {/* Emergency Stop Button - only shown during auto-complete */}
-        {isAutoCompleting && (
-          <button
-            onClick={() => {
-              setIsAutoCompleting(false);
-              setAutoCompleteError('Auto-complete manually stopped by user');
-            }}
-            style={{
-              background: '#e53e3e',
-              color: '#fff',
-              fontSize: '0.9rem',
-              fontWeight: 'bold',
-              borderRadius: '6px',
-              padding: '0.5rem 1rem',
-              width: '100%',
-              border: 'none',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-              cursor: 'pointer'
-            }}
-          >
-            <span style={{ marginRight: '6px' }}>⚠️</span> Stop Auto-Complete
-          </button>
-        )}
-        
-        {/* Auto-Complete Status - show count during auto-complete */}
-        {isAutoCompleting && (
-          <div style={{
-            padding: '8px 12px',
-            background: '#f7fafc',
-            borderRadius: '6px',
-            marginTop: '0.5rem',
-            fontSize: '0.85rem',
-            color: '#4a5568',
-            border: '1px dashed #cbd5e0',
-            textAlign: 'center'
-          }}>
-            Auto-completing: {autoCompleteCount} questions processed
-          </div>
-        )}
-      </div>
+      <select
+        value={testPersonaTier}
+        onChange={(e) => setTestPersonaTier(e.target.value as 'Dabbler' | 'Enabler' | 'Leader')}
+        disabled={isAutoCompleting || isLoading}
+        className="text-sm border border-sg-bright-green/30 text-sg-dark-teal bg-sg-cream-1 rounded-lg focus:ring-sg-bright-green focus:border-sg-bright-green py-2 px-3"
+      >
+        <option value="Dabbler">Test: Dabbler</option>
+        <option value="Enabler">Test: Enabler</option>
+        <option value="Leader">Test: Leader</option>
+      </select>
     );
   };
   
   return (
-    <div className="w-full max-w-4xl mx-auto font-sans">
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e7eb', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 4px 24px 0 rgba(10,61,61,0.10)' }}>
-        <tbody>
-          <tr>
-            <td style={{ width: '170px', backgroundColor: '#0a3d3d', color: 'white', verticalAlign: 'top', padding: '20px 10px', borderRadius: '18px', boxShadow: '0 2px 12px 0 rgba(10,61,61,0.08)' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '24px', textAlign: 'center', letterSpacing: '0.02em', fontSize: '1.1rem', color: '#A6F4C5' }}>
-                Assessment Phases
-              </div>
-              <div className="flex flex-col items-center w-full relative" style={{ minHeight: '320px' }}>
-                {assessmentPhases.map((phase, idx) => {
-                  const isCurrent = phase === currentPhaseName;
-                  const currentIdx = assessmentPhases.indexOf(currentPhaseName);
-                  const isPast = idx < currentIdx;
-                  const isFuture = idx > currentIdx;
-                  return (
-                    <div key={phase} className="flex flex-col items-center w-full relative">
-                      {/* Timeline circle */}
-                      <div className={
-                        `flex items-center justify-center rounded-full border-2 transition-all duration-200 mb-1 ` +
-                        (isCurrent
-                          ? 'bg-[#A6F4C5] border-[#A6F4C5] w-6 h-6 shadow-lg'
-                          : isPast
-                            ? 'bg-[#A6F4C5] border-[#A6F4C5] w-5 h-5'
-                            : 'bg-transparent border-[#A6F4C5] w-5 h-5')
-                      }>
-                        {isPast && (
-                          <span className="block w-2 h-2 bg-[#0a3d3d] rounded-full"></span>
-                        )}
-                        {isCurrent && (
-                          <span className="block w-2.5 h-2.5 bg-[#0a3d3d] rounded-full"></span>
-                        )}
-                      </div>
-                      {/* Timeline line (except after last step) */}
-                      {idx < assessmentPhases.length - 1 && (
-                        <div className="w-1 bg-[#A6F4C5]" style={{ height: '36px', minHeight: '36px' }}></div>
-                      )}
-                      {/* Phase name */}
-                      <span className={
-                        `mt-1 mb-4 text-center transition-all duration-200 block ` +
-                        (isCurrent
-                          ? 'font-bold text-[#A6F4C5] text-base drop-shadow'
-                          : isPast
-                            ? 'text-white opacity-90 text-base'
-                            : 'text-white opacity-60 text-base')
-                      }>
-                        {phase}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </td>
-            <td style={{ width: '275px', verticalAlign: 'top', padding: '20px', borderRight: '1px solid #e5e7eb', background: 'white' }}>
-              <div style={{ textAlign: 'center', marginBottom: '20px', color: '#0a3d3d', fontWeight: 600, fontSize: '1.08rem', letterSpacing: '0.01em' }}>
-                AI Thinking Process
-              </div>
-              {reasoningText ? (
-                <div style={{
-                  padding: '18px',
-                  backgroundColor: '#0a3d3d',
-                  color: 'white',
-                  fontStyle: 'italic',
-                  borderRadius: '12px',
-                  fontSize: '0.95rem',
-                  lineHeight: '1.5',
-                  boxShadow: '0 2px 12px 0 rgba(10,61,61,0.10)',
-                  border: '2px solid #A6F4C5',
-                  height: '200px',
-                  maxHeight: '200px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  alignItems: 'flex-start',
-                  marginBottom: '8px',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '5px', color: '#A6F4C5', fontStyle: 'normal', fontSize: '1.08rem' }}>
-                    <span style={{ marginRight: '4px' }}>💭</span> AI Reasoning:
-                  </div>
-                  <div style={{
-                    overflowY: 'auto',
-                    width: '100%',
-                    height: '160px',
-                    paddingRight: '8px',
-                    scrollbarWidth: 'thin',
-                    scrollbarColor: '#A6F4C5 #0a3d3d'
-                  }}>
-                    {displayedText}
-                    {!isComplete && <span style={{ marginLeft: '4px' }}>▋</span>}
-                  </div>
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '30px',
-                    background: 'linear-gradient(to bottom, transparent, #0a3d3d)',
-                    pointerEvents: 'none'
-                  }}></div>
-                </div>
-              ) : (
-                <div style={{
-                  padding: '18px',
-                  backgroundColor: '#f5f7f7',
-                  color: '#666',
-                  fontStyle: 'italic',
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  height: '200px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginBottom: '8px',
-                  border: '1px dashed #ccc'
-                }}>
-                  AI thinking process will appear here...
-                </div>
-              )}
-            </td>
-            <td style={{ verticalAlign: 'top', padding: '28px 24px 24px 24px', background: 'white' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '5px', color: '#0a3d3d', fontSize: '1.15rem' }}>
-                {currentPhaseName} Phase
-              </div>
-              <div style={{ fontSize: '0.95rem', color: '#6b7280', marginBottom: '15px' }}>
-                Question {currentQuestionNumber} of ~{maxQuestions}
-              </div>
-              <div style={{ marginBottom: '20px', color: '#222', fontSize: '1.08rem' }}>
-                {question}
-              </div>
-              <div style={{ marginBottom: '24px' }}>
-                {renderAnswerInput()}
-              </div>
-              {/* Test Persona Selector */}
+    <div className="flex flex-col lg:flex-row lg:space-x-6">
+      <div className="lg:w-2/3">
+        {/* Question Display */}
+        <div className="mb-8 relative">
+          <div className="absolute -left-10 top-0 flex items-center justify-center rounded-full w-8 h-8 bg-sg-bright-green text-white font-semibold">
+            {currentQuestionNumber}
+          </div>
+          <h3 className="text-xl font-semibold text-sg-dark-teal mb-2">{question}</h3>
+          <div className="text-sm text-sg-dark-teal/70 mb-4">
+            Select the option that best describes your organization's current situation
+          </div>
+          {renderAnswerInput()}
+        </div>
+
+        {/* Submit and Auto-Complete Section */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <button
+            type="button"
+            onClick={() => onSubmitAnswer(currentAnswer)}
+            disabled={isSubmitDisabled}
+            className={`sg-button-primary flex items-center justify-center ${
+              isSubmitDisabled
+                ? 'opacity-50 cursor-not-allowed'
+                : ''
+            }`}
+          >
+            {isLoading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </>
+            ) : (
+              <>
+                Submit Answer
+                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </>
+            )}
+          </button>
+          
+          {/* Auto-Complete Section */}
+          {!isAutoCompleting && !isLoading && currentQuestionNumber < maxQuestions && (
+            <div className="flex items-center">
               {renderTestPersonaTierSelector()}
               <button
-                data-testid="scorecard-submit-btn"
-                onClick={() => onSubmitAnswer(currentAnswer, 'Manual')}
-                disabled={isSubmitDisabled}
-                className={
-                  `w-full py-3 px-6 rounded-lg font-bold text-lg shadow-md transition-all duration-150 ` +
-                  (isSubmitDisabled
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
-                    : 'bg-[#A6F4C5] text-[#0a3d3d] hover:bg-[#7be6a7] hover:scale-[1.03] active:scale-100')
-                }
-                style={{ letterSpacing: '0.01em' }}
+                onClick={handleStartAutoComplete}
+                className="ml-2 sg-button-secondary text-sm px-4 py-2 flex items-center"
               >
-                {isLoading ? 'Submitting...' : 'Submit Answer'}
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Auto-Complete
               </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+          )}
+          
+          {/* Auto-Complete in Progress UI */}
+          {isAutoCompleting && !isLoading && (
+            <div className="flex items-center p-3 bg-sg-light-mint rounded-lg">
+              <span className="flex items-center text-sm text-sg-dark-teal">
+                <svg className="animate-spin mr-2 h-4 w-4 text-sg-bright-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Auto-completing ({autoCompleteCount}/{maxQuestions - questionAnswerHistory.length})
+              </span>
+              <button
+                onClick={() => setIsAutoCompleting(false)}
+                className="ml-3 px-3 py-1 bg-red-100 text-red-700 border border-red-300 rounded-lg hover:bg-red-200 transition-all text-sm font-medium"
+              >
+                Stop
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* AI Reasoning Display - Now on the right side */}
+      {reasoningText && (
+        <div className="lg:w-1/3 mt-8 lg:mt-0">
+          <div className="sticky top-4 p-5 bg-sg-bright-green/10 border-l-4 border-sg-bright-green rounded-lg shadow-sm transition-all">
+            <div className="flex items-center mb-3">
+              <div className="p-2 rounded-full bg-sg-bright-green/20 mr-2">
+                <svg className="w-5 h-5 text-sg-bright-green" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <h4 className="text-base font-medium text-sg-dark-teal">AI Analysis</h4>
+            </div>
+            <div className="text-sm text-sg-dark-teal/80 prose prose-sm max-w-none whitespace-pre-wrap max-h-[300px] overflow-y-auto pr-2">
+              {displayedText}
+              {!isComplete && <span className="animate-pulse text-sg-bright-green">_</span>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

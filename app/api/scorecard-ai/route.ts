@@ -8,7 +8,7 @@ interface QAPair {
 
 // Define assessment phases and maximum questions
 const ASSESSMENT_PHASES = ['Strategy & Goals', 'Data Readiness', 'Technology & Tools', 'Team Skills & Process', 'Governance & Measurement'];
-const MAX_QUESTIONS = 20; // Approximately 4 questions per phase
+const MAX_QUESTIONS = 20; // Set back to 20 questions
 
 // Pollinations API base URL
 const POLLINATIONS_API_URL = "https://text.pollinations.ai/openai";
@@ -153,7 +153,7 @@ Based on your scorecard results, select 2-3 of the most relevant resources and p
 
     const completion = await response.json();
     const reportMarkdown = completion.choices[0].message.content;
-    console.log(">>> BACKEND: Successfully generated report. Length:", reportMarkdown?.length);
+    console.log('>>> BACKEND: FULL GENERATED MARKDOWN REPORT:\n', reportMarkdown);
 
     return NextResponse.json({
       reportMarkdown,
@@ -172,7 +172,6 @@ async function handleAssessmentRequest(currentPhaseName: string, history: QAPair
   try {
     // Check if we've reached MAX_QUESTIONS
     if (history.length >= MAX_QUESTIONS) {
-      console.log('>>> BACKEND: Maximum questions reached:', MAX_QUESTIONS);
       return NextResponse.json({
         questionText: null,
         answerType: null,
@@ -183,158 +182,65 @@ async function handleAssessmentRequest(currentPhaseName: string, history: QAPair
       });
     }
 
-    // Create the system prompt for assessment questions
-    const systemPrompt = `You are an AI Assessment Expert for the Social Garden AI Efficiency Scorecard, evaluating organizations in the ${industry} industry. Your task is to generate the next relevant question for the current phase "${currentPhaseName}".
+    // If phase is complete, move to next phase
+    const currentPhaseIndex = ASSESSMENT_PHASES.indexOf(currentPhaseName);
+    if (currentPhaseIndex < ASSESSMENT_PHASES.length - 1) {
+      const nextPhase = ASSESSMENT_PHASES[currentPhaseIndex + 1];
+      return await handleAssessmentRequest(nextPhase, history, industry);
+    }
 
-Assessment Context:
-- Current Phase: ${currentPhaseName}
-- Available Phases: ${JSON.stringify(ASSESSMENT_PHASES)}
-- Maximum Questions: ${MAX_QUESTIONS}
-- Questions Per Phase: ~${Math.ceil(MAX_QUESTIONS / ASSESSMENT_PHASES.length)}
-- Current Question Count: ${history.length}
-
-IMPORTANT RULES:
-1. Analyze the provided history carefully to avoid redundant questions
-2. Return ONLY valid JSON matching this exact structure:
-{
+    // Create the system prompt
+    const systemPrompt = `Generate a new question for phase "${currentPhaseName}" in the ${industry} industry.
+DO NOT repeat any previous questions. Each question must be unique.
+Return JSON: {
   "questionText": string,
   "answerType": "text" | "radio" | "checkbox" | "scale",
   "options": string[] | null,
   "phase_status": "asking" | "complete",
   "overall_status": "asking" | "completed",
   "reasoning_text": string
-}
+}`;
 
-3. Set phase_status="complete" when:
-   - Current phase has enough questions (~${Math.ceil(MAX_QUESTIONS / ASSESSMENT_PHASES.length)})
-   - OR when the questions for this phase are logically complete
-
-4. Set overall_status="completed" when:
-   - All phases are complete
-   - OR total questions across all phases reaches ${MAX_QUESTIONS}
-   - OR this is the final phase and it's complete
-
-5. Make questions highly specific to ${industry} industry context
-
-6. For reasoning_text:
-   - Write detailed, thoughtful reasoning in first person as if you're thinking out loud
-   - Explain WHY you chose this specific question based on previous answers
-   - Reference specific answers from history where relevant
-   - For the first question in a phase, explain why this is a good starting point
-   - Aim for 2-3 sentences minimum
-   - Make it sound like actual AI reasoning/thinking, not just a description
-
-Your response MUST be a valid JSON object matching the specified structure.`;
-
-    console.log('>>> BACKEND: Preparing assessment request');
-    console.log('Current phase:', currentPhaseName);
-    console.log('History length:', history.length);
-
-    // Format messages for Pollinations AI
+    // Call API and get response
     const requestBody = {
       model: "openai-large",
       messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: `Based on the assessment history: ${JSON.stringify(history)}, generate the next appropriate question for the current phase "${currentPhaseName}".`
-        }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Based on history: ${JSON.stringify(history)}, generate next question.` }
       ],
       temperature: 0.7,
       response_format: { type: "json_object" }
     };
 
-    // Call Pollinations AI API
     const response = await fetchWithRetry(POLLINATIONS_API_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Pollinations API responded with status ${response.status}: ${errorBody}`);
-    }
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const completion = await response.json();
-    const responseContent = completion.choices[0].message.content;
-    console.log('>>> BACKEND: Raw Pollinations AI response:', responseContent);
+    const parsedResponse = JSON.parse(completion.choices[0].message.content);
 
-    // Parse and validate the response
-    const parsedResponse = JSON.parse(responseContent);
-    
-    // Validate required fields
-    const requiredFields = ['questionText', 'answerType', 'phase_status', 'overall_status', 'reasoning_text'];
-    for (const field of requiredFields) {
-      if (!(field in parsedResponse)) {
-        throw new Error(`Pollinations AI response missing required field: ${field}`);
-      }
-    }
-
-    // Validate answer type
-    if (!['text', 'radio', 'checkbox', 'scale'].includes(parsedResponse.answerType)) {
-      throw new Error(`Invalid answerType: ${parsedResponse.answerType}`);
-    }
-
-    // Ensure options array exists for choice-based questions
-    if (['radio', 'checkbox'].includes(parsedResponse.answerType) && !Array.isArray(parsedResponse.options)) {
-      throw new Error('Options array required for radio/checkbox questions');
-    }
-
-    // --- FORCE overall_status to 'asking' until MAX_QUESTIONS is reached ---
-    if (history.length + 1 < MAX_QUESTIONS) {
-      parsedResponse.overall_status = 'asking';
-    } else {
-      parsedResponse.overall_status = 'completed';
-    }
-
-    // PATCH: If questionText is blank/empty and we haven't hit MAX_QUESTIONS, advance phase and re-ask
-    if (
-      (!parsedResponse.questionText || parsedResponse.questionText.trim() === '') &&
-      history.length < MAX_QUESTIONS
-    ) {
-      const currentPhaseIndex = ASSESSMENT_PHASES.indexOf(currentPhaseName);
+    // Check for repeated questions
+    if (history.some(qa => qa.question === parsedResponse.questionText)) {
+      // Move to next phase if question repeats
       if (currentPhaseIndex < ASSESSMENT_PHASES.length - 1) {
-        // Advance to next phase and recursively call for a new question
         const nextPhase = ASSESSMENT_PHASES[currentPhaseIndex + 1];
-        console.log('>>> BACKEND: Blank question detected, advancing to next phase:', nextPhase);
         return await handleAssessmentRequest(nextPhase, history, industry);
-      } else {
-        // If no more phases, finish assessment
-        return NextResponse.json({
-          questionText: null,
-          answerType: null,
-          options: null,
-          phase_status: 'complete',
-          overall_status: 'completed',
-          currentPhaseName
-        });
       }
     }
 
-    // Handle phase transitions
-    if (parsedResponse.phase_status === 'complete' && parsedResponse.overall_status === 'asking') {
-      const currentPhaseIndex = ASSESSMENT_PHASES.indexOf(currentPhaseName);
-      if (currentPhaseIndex < ASSESSMENT_PHASES.length - 1) {
-        parsedResponse.currentPhaseName = ASSESSMENT_PHASES[currentPhaseIndex + 1];
-      } else {
-        parsedResponse.overall_status = 'completed';
-      }
-    } else {
-      parsedResponse.currentPhaseName = currentPhaseName;
-    }
+    return NextResponse.json({
+      ...parsedResponse,
+      currentPhaseName
+    });
 
-    console.log('>>> BACKEND: Returning processed response:', parsedResponse);
-    return NextResponse.json(parsedResponse, { status: 200 });
   } catch (error) {
-    console.error('Error in assessment request:', error);
+    console.error('Error:', error);
     return NextResponse.json(
-      { error: 'Failed to generate question', message: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to generate question' },
       { status: 500 }
     );
   }
