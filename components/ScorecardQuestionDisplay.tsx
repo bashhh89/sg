@@ -249,10 +249,9 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
   useEffect(() => {
     if (isAutoCompleting && question && answerType && !isLoadingLocally && !isLoading) {
       // Check if we've reached or are about to reach the maximum number of questions
-      // We check against maxQuestions - 1 because the current question being displayed
-      // will be the final question when questionAnswerHistory.length is maxQuestions - 1
-      if (questionAnswerHistory.length >= maxQuestions - 1) {
-        console.log(`Auto-complete stopped: Reached ${questionAnswerHistory.length} questions out of max ${maxQuestions}`);
+      // We check against maxQuestions. If history length equals maxQuestions, all questions are answered.
+      if (questionAnswerHistory.length >= maxQuestions) {
+        console.log(`Auto-complete stopped: Reached ${questionAnswerHistory.length} questions (max: ${maxQuestions}). All questions answered.`);
         setIsAutoCompleting(false);
         return;
       }
@@ -272,69 +271,95 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
     setIsLoadingLocally(true);
     let currentAnswerSource: AnswerSourceType = 'Groq API Failed';
     try {
-      const groqSystemPrompt = `You are simulating an answer from a Marketing Manager at the '${testPersonaTier}' level of AI adoption within the '${industry}' industry. Answer the following question concisely and appropriately for your persona, based *only* on the question itself. Provide ONLY the answer value. Format correctly based on Answer Type. Be plausible and professional.`;
-      const userMessage = `Question: ${question}\nAnswer Type: ${answerType}\nAvailable Options (if applicable): ${JSON.stringify(options)}\nInstructions: For single-choice, output the chosen option text. For multiple-choice, output a JSON array with ONE relevant chosen option string. For text, provide ONE concise, relevant sentence in character. For scale (1-5), output a number appropriate for persona (Dabbler 1-2, Enabler 2-4, Leader 4-5).`;
-      let generatedAnswer = '';
-      let groqFailed = false;
+      // Enhanced system prompt with more specific tier-based guidance
+      const groqSystemPrompt = `You are simulating answers from a Marketing Manager at the '${testPersonaTier}' level of AI adoption within the '${industry}' industry.
+      
+${testPersonaTier === 'Dabbler' ? 
+`As a DABBLER, you are aware of AI but have limited practical application. You use basic tools for simple tasks, have no formal AI strategy, and focus on immediate, tactical challenges. Use terms like "basic", "limited", "minimal", "occasional", "beginning", "exploring", "ad hoc", "manual", "no", "not", "haven't", "don't", "unsure", "just started", or "considering".` :
+testPersonaTier === 'Enabler' ? 
+`As an ENABLER, you actively use several AI tools for tasks like content generation, email optimization, and basic analytics. You are trying to integrate AI more strategically. Use terms like "some", "moderate", "developing", "improving", "established", "regular", "multiple", "organized", or "consistent".` :
+`As a LEADER, you drive AI strategy for your department, overseeing integrated AI solutions for hyper-personalization, predictive analytics, and AI-driven campaign orchestration. You focus on ROI, scalability, and competitive advantage. Use terms like "advanced", "strategic", "comprehensive", "integrated", "sophisticated", "enterprise", "mature", "automated", "ai-driven", or "predictive".`}
+
+Answer the following question concisely and appropriately for your persona, based *only* on the question itself. Provide ONLY the answer value. Format correctly based on Answer Type:
+- For scale (1-5), ${testPersonaTier === 'Dabbler' ? 'output values between 1-2' : testPersonaTier === 'Enabler' ? 'output values between 2-4' : 'output values between 4-5'} to reflect your tier.
+- For radio buttons, choose exactly ONE option that best reflects your ${testPersonaTier} persona.
+- For checkboxes, select ${testPersonaTier === 'Dabbler' ? '1-2 options only' : testPersonaTier === 'Enabler' ? '2-4 options' : '4+ options'} to reflect your tier.
+- For text inputs, provide a concise answer (1-2 sentences) using vocabulary appropriate for your tier level.
+
+Be plausible and professional, but make sure your answer clearly identifies you as a ${testPersonaTier.toUpperCase()}-level organization.`;
+
+      // Adjust user prompt based on tier
+      const userPrompt = `As a ${testPersonaTier} in the ${industry} industry, answer this question: "${question}". Answer type: ${normalizedAnswerType}${options ? `. Options: ${JSON.stringify(options)}` : ''}.`;
+      
+      console.log("Auto-answer persona:", testPersonaTier);
+      
+      // Variable to store the generated answer
+      let simulatedPersonaAnswer = '';
+      
+      // First try Groq API
       try {
-        const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
-        const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const groqResponse = await fetch('/api/groq', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${groqApiKey}`
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            messages: [
-              { role: 'system', content: groqSystemPrompt },
-              { role: 'user', content: userMessage }
-            ],
-            model: 'llama3-8b-8192'
-          })
+            system: groqSystemPrompt,
+            prompt: userPrompt,
+          }),
         });
+
         if (!groqResponse.ok) {
-          groqFailed = true;
-        } else {
-          const groqData = await groqResponse.json();
-          generatedAnswer = groqData.choices?.[0]?.message?.content?.trim() || '';
-          if (!generatedAnswer) groqFailed = true;
-          else currentAnswerSource = 'Groq Llama 3 8B';
+          throw new Error(`Groq API error: ${groqResponse.status}`);
         }
-      } catch (err) {
-        groqFailed = true;
-      }
-      // Fallback to Pollinations if Groq fails
-      if (groqFailed) {
+
+        const groqData = await groqResponse.json();
+        if (groqData && groqData.content) {
+          simulatedPersonaAnswer = groqData.content.trim();
+          currentAnswerSource = 'Groq Llama 3 8B';
+        } else {
+          throw new Error('No content in Groq response');
+        }
+      } catch (groqError) {
+        console.warn('Groq API error, falling back to Pollinations:', groqError);
+
         try {
-          const pollinationPrompt = `Simulate answer: Persona='${testPersonaTier}' Marketing Mgr, Industry='${industry}'. Q: ${question}. Type: ${answerType}. Options: ${JSON.stringify(options)}. Provide ONLY the concise answer value.`;
-          const pollResponse = await fetch('https://text.pollinations.ai/openai', {
+          // Fallback to Pollinations API
+          const pollinationsResponse = await fetch('https://text.pollinations.ai/openai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: "openai-large",
               messages: [
-                { role: "system", content: "You provide concise simulated answers based on persona and question." },
-                { role: "user", content: pollinationPrompt }
-              ]
+                { role: "system", content: groqSystemPrompt },
+                { role: "user", content: userPrompt },
+              ],
+              temperature: 0.7,
+              max_tokens: 200,
             }),
           });
-          if (!pollResponse.ok) throw new Error('Pollinations API error');
-          const pollData = await pollResponse.json();
-          generatedAnswer = pollData.choices?.[0]?.message?.content?.trim() || '';
-          if (!generatedAnswer) throw new Error('Pollinations returned empty answer');
-          currentAnswerSource = 'Pollinations Fallback';
-        } catch (pollErr) {
-          currentAnswerSource = 'Fallback Failed';
-          setAutoCompleteError('Both Groq and Pollinations answer generation failed.');
-          setIsAutoCompleting(false);
-          setIsLoadingLocally(false);
-          return;
+
+          if (!pollinationsResponse.ok) {
+            throw new Error(`Pollinations API error: ${pollinationsResponse.status}`);
+          }
+
+          const pollinationsData = await pollinationsResponse.json();
+          if (pollinationsData && pollinationsData.choices && pollinationsData.choices[0]?.message?.content) {
+            simulatedPersonaAnswer = pollinationsData.choices[0].message.content.trim();
+            currentAnswerSource = 'Pollinations Fallback';
+          } else {
+            throw new Error('No content in Pollinations response');
+          }
+        } catch (pollinationsError) {
+          console.error('Both Groq and Pollinations APIs failed:', pollinationsError);
+          // Fall back to hardcoded answers
+          throw pollinationsError; // This will trigger the catch block below
         }
       }
-      setCurrentAnswer(generatedAnswer);
+      
+      // Set the answer and submit it
+      setCurrentAnswer(simulatedPersonaAnswer);
       setTimeout(async () => {
         try {
-          await onSubmitAnswer(generatedAnswer, currentAnswerSource);
+          await onSubmitAnswer(simulatedPersonaAnswer, currentAnswerSource);
           setAutoCompleteCount(prev => prev + 1);
         } catch (submitErr) {
           setAutoCompleteError('Error during answer submission.');
@@ -458,7 +483,7 @@ const ScorecardQuestionDisplay: React.FC<ScorecardQuestionDisplayProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               </div>
-              <h4 className="text-base font-medium text-sg-dark-teal">AI Analysis</h4>
+              {/* <h4 className="text-base font-medium text-sg-dark-teal">AI Analysis</h4> */}
             </div>
             <div className="text-sm text-sg-dark-teal/80 prose prose-sm max-w-none whitespace-pre-wrap max-h-[300px] overflow-y-auto pr-2">
               {displayedText}
